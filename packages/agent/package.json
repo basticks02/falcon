@@ -1,0 +1,10 @@
+{
+  "name": "@fca/agent",
+  "version": "0.0.1",
+  "type": "module",
+  "main": "index.js",
+  "dependencies": {
+    "@fca/prompts": "*",
+    "@fca/tools": "*"
+  }
+}
