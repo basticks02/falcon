@@ -3,8 +3,12 @@ import { executeTool } from "@fca/tools";
 
 const MAX_TURNS = 6;
 
+const CLAUDE_URL = typeof window !== "undefined"
+  ? "/anthropic/v1/messages"       // proxied through Vite dev server (avoids CORS)
+  : "https://api.anthropic.com/v1/messages"; // direct in Node (Slack bot, tests)
+
 async function callClaude(messages, apiKey) {
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
+  const res = await fetch(CLAUDE_URL, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

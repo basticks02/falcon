@@ -13,8 +13,12 @@ RULES – follow exactly:
    - NPI number found OR medical context (Medicare/Medicaid/HHS/DME) → call fetch_cms
    - OpenCorporates returns shell structure or suspicious parent → call fetch_edgar
    - USASpending returns contracts AND another anomaly already exists → call fetch_sam
+   - Any company name or individual name → call fetch_opensanctions in parallel with other lookups
    - Never call fetch_cms without medical context
    - Never call fetch_edgar if OpenCorporates found nothing
+
+   - fetch_opensanctions: dataset options are "default" (all), "sanctions", "peps"
+     schema options: "Company", "Person", "LegalEntity"
 
 3. ANOMALY RULES – flag ONLY these patterns:
    - Company incorporated within 90 days of first contract award
@@ -108,6 +112,19 @@ export const TOOL_DEFINITIONS = [
         company_name: { type: "string" },
         uei: { type: "string", description: "UEI from USASpending results if available" }
       }
+    }
+  },
+  {
+    name: "fetch_opensanctions",
+    description: "Search OpenSanctions for sanctions lists, debarment records, and politically exposed persons (PEPs). Call for any company name or individual name found in the tip. Returns sanctions programs, topics, countries, aliases. Dataset 'default' covers all sources; 'sanctions' for sanctions only; 'peps' for PEPs only.",
+    input_schema: {
+      type: "object",
+      properties: {
+        query: { type: "string", description: "Company or person name to screen" },
+        schema: { type: "string", description: "Entity type filter: 'Company', 'Person', or 'LegalEntity'" },
+        dataset: { type: "string", description: "Dataset scope: 'default', 'sanctions', or 'peps'. Defaults to 'default'." }
+      },
+      required: ["query"]
     }
   }
 ];
