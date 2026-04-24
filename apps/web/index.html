@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>fca</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #0d0d0d;
+      color: #e0e0e0;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      line-height: 1.6;
+    }
+
+    #wrap {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 48px 24px;
+    }
+
+    /* ── Input ── */
+    #tip {
+      width: 100%;
+      background: #111;
+      border: 0.5px solid #1e1e1e;
+      color: #e0e0e0;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      line-height: 1.6;
+      padding: 12px;
+      resize: vertical;
+      outline: none;
+      display: block;
+      border-radius: 0;
+    }
+    #tip::placeholder { color: #444; }
+    #tip:focus { border-color: #2a2a2a; }
+
+    #run {
+      margin-top: 8px;
+      background: none;
+      border: 0.5px solid #2a2a2a;
+      color: #888;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      padding: 6px 12px;
+      cursor: pointer;
+      border-radius: 0;
+    }
+    #run:hover:not(:disabled) { border-color: #378ADD; color: #378ADD; }
+    #run:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* ── Feed ── */
+    #feed {
+      margin-top: 32px;
+      overflow-y: auto;
+      max-height: calc(100vh - 200px);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .row {
+      padding: 2px 0 2px 12px;
+      border-left: 2px solid transparent;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      line-height: 1.6;
+      animation: fadein 150ms ease forwards;
+    }
+    @keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
+
+    .row.thinking      { border-left-color: #444;    color: #888; }
+    .row.tool-spawn    { border-left-color: #378ADD; color: #888; transition: border-left-color 400ms ease; }
+    .row.tool-spawn.resolved { border-left-color: #4a9e4a; }
+    .row.url           { border-left-color: #1e1e1e; color: #444; }
+    .row.url a         { color: #444; text-decoration: none; cursor: pointer; }
+    .row.url a:hover   { text-decoration: underline; }
+    .row.log-note      { border-left-color: #1e1e1e; color: #888; }
+    .row.log-flag      { border-left-color: #c0392b; color: #c0392b; }
+    .row.log-done      { border-left-color: #4a9e4a; color: #4a9e4a; }
+    .row.error-row     { border-left-color: #c0392b; color: #c0392b; }
+    .row.followup      { border-left: 2px solid transparent; color: #444; }
+    .row.spacer        { border: none; height: 8px; }
+
+    .blink { display: inline-block; animation: blink 1s step-end infinite; }
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+    .tool-name  { color: #e0e0e0; }
+    .tool-arrow { color: #888; }
+    .tool-url   { color: #444; }
+    .tool-input { color: #444; }
+
+    /* ── Brief ── */
+    #brief { margin-top: 32px; }
+    #brief hr { border: none; border-top: 1px solid #1e1e1e; margin-bottom: 20px; }
+
+    .brief-section { margin-bottom: 16px; }
+    .brief-label {
+      font-size: 10px;
+      color: #444;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      font-weight: 400;
+      margin-bottom: 4px;
+    }
+    .brief-value { font-size: 11px; color: #e0e0e0; line-height: 1.6; }
+    .brief-value.confidence-high         { color: #c0392b; }
+    .brief-value.confidence-medium       { color: #b8860b; }
+    .brief-value.confidence-low          { color: #4a9e4a; }
+    .brief-value.confidence-insufficient { color: #444; }
+
+    .anomaly-row  { font-size: 11px; line-height: 1.6; color: #e0e0e0; }
+    .sev-high     { color: #c0392b; }
+    .sev-med      { color: #b8860b; }
+    .sev-low      { color: #4a9e4a; }
+    .anom-source  { color: #444; }
+
+    .statute-row  { font-size: 11px; line-height: 1.6; color: #e0e0e0; }
+    .statute-code { color: #378ADD; }
+
+    /* ── API key ── */
+    #api-row {
+      margin-top: 48px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    #api-row label {
+      font-size: 10px;
+      color: #444;
+      font-family: 'JetBrains Mono', monospace;
+      cursor: default;
+    }
+    #apiKey {
+      flex: 1;
+      background: #111;
+      border: 0.5px solid #1e1e1e;
+      color: #888;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      padding: 6px 8px;
+      outline: none;
+      border-radius: 0;
+    }
+    #apiKey:focus { border-color: #2a2a2a; }
+  </style>
+</head>
+<body>
+  <div id="wrap">
+    <textarea
+      id="tip"
+      rows="4"
+      placeholder="enter tip — company name, NPI, alleged fraud type..."
+    ></textarea>
+    <button id="run">→ investigate</button>
+
+    <div id="feed"></div>
+    <div id="brief"></div>
+
+    <div id="api-row">
+      <label for="apiKey">api key</label>
+      <input type="password" id="apiKey" placeholder="sk-ant-..." />
+    </div>
+  </div>
+
+  <script type="module">
+    import { runAgent } from '@fca/agent';
+
+    // ── DOM refs ──────────────────────────────────────────────
+    const params    = new URLSearchParams(window.location.search);
+    const sessionId = params.get('session');
+
+    const feedEl   = document.getElementById('feed');
+    const briefEl  = document.getElementById('brief');
+    const tipEl    = document.getElementById('tip');
+    const runBtn   = document.getElementById('run');
+    const apiKeyEl = document.getElementById('apiKey');
+
+    const spawnRows = new Map(); // toolCall.id → row element
+
+    // ── Tool metadata ─────────────────────────────────────────
+    const TOOL_META = {
+      fetch_usaspending:    { label: 'usaspending',    url: 'api.usaspending.gov',         conditional: false },
+      fetch_cms:            { label: 'cms · npi',      url: 'npiregistry.cms.hhs.gov',     conditional: false },
+      fetch_opencorporates: { label: 'opencorporates', url: 'api.opencorporates.com',       conditional: false },
+      fetch_edgar:          { label: 'edgar',          url: 'efts.sec.gov',                conditional: true  },
+      fetch_sam:            { label: 'sam.gov',        url: 'api.sam.gov',                 conditional: true  },
+    };
+
+    // ── Row helpers ───────────────────────────────────────────
+    function pushRow(cls, html) {
+      const div = document.createElement('div');
+      div.className = `row ${cls}`;
+      div.innerHTML = html;
+      feedEl.appendChild(div);
+      div.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      return div;
+    }
+
+    function pushSpacer() {
+      const div = document.createElement('div');
+      div.className = 'row spacer';
+      feedEl.appendChild(div);
+    }
+
+    // ── Callbacks ─────────────────────────────────────────────
+    function onToolSpawn(tc) {
+      const meta = TOOL_META[tc.name] || { label: tc.name, url: '', conditional: false };
+
+      if (meta.conditional) {
+        pushRow('followup', '  └─ following up on anomaly');
+      }
+
+      const inputSummary = Object.values(tc.input || {}).filter(Boolean).join(', ');
+      const row = pushRow(
+        'tool-spawn',
+        `<span class="tool-name">${meta.label}</span>` +
+        ` <span class="tool-arrow">↗</span>` +
+        ` <span class="tool-url">${meta.url}</span>` +
+        (inputSummary ? ` <span class="tool-input">· ${inputSummary}</span>` : '') +
+        ` <span class="blink">_</span>`
+      );
+      spawnRows.set(tc.id, row);
+    }
+
+    function onToolResult(tc, result) {
+      const row = spawnRows.get(tc.id);
+      if (row) {
+        row.querySelector('.blink')?.remove();
+        row.classList.add('resolved');
+      }
+
+      const notes = extractNotes(tc.name, tc.input, result);
+      const flags = extractFlags(tc.name, result);
+
+      for (const note of notes) pushRow('log-note', `  · ${note}`);
+      for (const flag of flags) pushRow('log-flag', `  ⚑ ${flag}`);
+      if (!result?.error) pushRow('log-done', '  ✓ done');
+
+      pushSpacer();
+    }
+
+    function onThinking(text) {
+      const line = text.split('\n').find(l => l.trim());
+      if (line) pushRow('thinking', `▸ ${line.trim()}`);
+    }
+
+    // ── Result extractors ─────────────────────────────────────
+    function extractNotes(name, input, result) {
+      if (result?.error) return [`error: ${result.error}`];
+
+      switch (name) {
+        case 'fetch_usaspending': {
+          if (!result.found) return [result.message || 'no results'];
+          const rows = [`${result.total_contracts} contracts · $${(result.total_value / 1e6).toFixed(1)}M total`];
+          if (result.contracts?.[0]) {
+            const c = result.contracts[0];
+            rows.push(`top: ${c.recipient} · ${c.agency}`);
+            if (c.uei) rows.push(`uei: ${c.uei}`);
+          }
+          return rows;
+        }
+        case 'fetch_cms': {
+          if (!result.found) return [result.message || 'no provider found'];
+          const p = result.providers?.[0];
+          return [
+            `${p?.name} · ${p?.specialty || 'unknown specialty'}`,
+            p?.address ? `${p.address.city}, ${p.address.state}` : null,
+            `enumerated: ${p?.enumeration_date}`,
+          ].filter(Boolean);
+        }
+        case 'fetch_opencorporates': {
+          if (!result.found) return [result.message || 'no corporate records'];
+          const c = result.companies?.[0];
+          return [
+            `${c?.name} · ${c?.jurisdiction} · inc. ${c?.incorporation_date || 'unknown'}`,
+            c?.registered_agent ? `agent: ${c.registered_agent}` : null,
+            c?.dissolution_date ? `dissolved: ${c.dissolution_date}` : null,
+          ].filter(Boolean);
+        }
+        case 'fetch_edgar': {
+          if (!result.found) return [result.message || 'no filings found'];
+          return [
+            `${result.total_filings} total filings`,
+            result.recent_filings?.[0]
+              ? `latest: ${result.recent_filings[0].form_type} · ${result.recent_filings[0].filed}`
+              : null,
+          ].filter(Boolean);
+        }
+        case 'fetch_sam': {
+          if (!result.found) return [result.message || 'no registration found'];
+          const e = result.entities?.[0];
+          return [
+            `${e?.name} · cage: ${e?.cage}`,
+            `status: ${e?.status} · expires: ${e?.expiry}`,
+          ].filter(Boolean);
+        }
+        default: return [];
+      }
+    }
+
+    function extractFlags(name, result) {
+      if (!result?.found) return [];
+      switch (name) {
+        case 'fetch_cms':
+          return !result.providers?.[0]?.address?.address_1 ? ['no physical address on file'] : [];
+        case 'fetch_opencorporates':
+          return result.companies?.[0]?.inactive ? ['company is inactive or dissolved'] : [];
+        case 'fetch_sam':
+          return result.entities?.[0]?.exclusion_flag === 'Y' ? ['exclusion flag active'] : [];
+        default: return [];
+      }
+    }
+
+    // ── Case brief ────────────────────────────────────────────
+    function renderBrief(result) {
+      if (!result || result.error) {
+        pushRow('error-row', `✗ ${result?.error || 'synthesis failed'}`);
+        return;
+      }
+
+      briefEl.innerHTML = '';
+      briefEl.appendChild(Object.assign(document.createElement('hr')));
+
+      function section(label, html) {
+        const wrap = document.createElement('div');
+        wrap.className = 'brief-section';
+        wrap.innerHTML = `<div class="brief-label">${label}</div>${html}`;
+        briefEl.appendChild(wrap);
+      }
+
+      section('CONFIDENCE',
+        `<div class="brief-value confidence-${result.confidence || 'insufficient'}">${result.confidence || '—'}</div>`
+      );
+
+      section('REASONING',
+        `<div class="brief-value">${result.reasoning || '—'}</div>`
+      );
+
+      section('ENTITIES',
+        (result.entities || []).map(e =>
+          `<div class="brief-value">· ${e.name} <span style="color:#444">[${e.type}]</span></div>`
+        ).join('') || '<div class="brief-value" style="color:#444">none extracted</div>'
+      );
+
+      section('ANOMALIES',
+        (result.anomalies || []).map(a => {
+          const cls   = a.severity === 'high' ? 'sev-high' : a.severity === 'medium' ? 'sev-med' : 'sev-low';
+          const badge = `[${a.severity === 'medium' ? 'MED' : a.severity.toUpperCase()}]`;
+          return `<div class="anomaly-row"><span class="${cls}">${badge}</span> ${a.description} <span class="anom-source">${a.source}</span></div>`;
+        }).join('') || '<div class="brief-value" style="color:#444">none found</div>'
+      );
+
+      section('STATUTES',
+        (result.statutes || []).map(s =>
+          `<div class="statute-row"><span class="statute-code">${s.code}</span> ${s.description}</div>`
+        ).join('') || '<div class="brief-value" style="color:#444">—</div>'
+      );
+
+      section('NEXT STEPS',
+        `<div class="brief-value">${result.next_steps || '—'}</div>`
+      );
+
+      briefEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    // ── Reset ─────────────────────────────────────────────────
+    function reset() {
+      feedEl.innerHTML  = '';
+      briefEl.innerHTML = '';
+      spawnRows.clear();
+    }
+
+    // ── Session mode (Slack → web live stream) ────────────────
+    if (sessionId) {
+      reset();
+
+      const slackBotUrl =
+        document.querySelector('meta[name="slack-bot-url"]')?.content ||
+        'http://localhost:3001';
+
+      const banner = document.createElement('div');
+      banner.style.cssText = 'font-size:11px;color:#444;padding:2px 0;margin-bottom:12px;font-family:JetBrains Mono,monospace;';
+      banner.textContent = '⚡ live session · triggered from slack';
+      feedEl.insertAdjacentElement('beforebegin', banner);
+
+      const es = new EventSource(`${slackBotUrl}/api/session/${sessionId}`);
+      es.onmessage = (e) => {
+        const event = JSON.parse(e.data);
+        if (event.type === 'tool_spawn')  onToolSpawn(event.toolCall);
+        if (event.type === 'tool_result') onToolResult({ id: event.toolCallId, name: event.name, input: {} }, event.result);
+        if (event.type === 'done')        { renderBrief(event.result); es.close(); }
+        if (event.type === 'error')       { pushRow('error-row', `✗ ${event.message}`); es.close(); }
+      };
+      es.onerror = () => pushRow('error-row', '✗ lost connection to agent stream');
+    }
+
+    // ── Direct mode ───────────────────────────────────────────
+    runBtn.addEventListener('click', async () => {
+      const tip = tipEl.value.trim();
+      if (!tip) return;
+
+      const apiKey = apiKeyEl.value.trim() || import.meta.env.VITE_ANTHROPIC_API_KEY;
+      if (!apiKey) {
+        pushRow('error-row', '✗ api key required — enter below or set VITE_ANTHROPIC_API_KEY in .env');
+        return;
+      }
+
+      reset();
+      runBtn.disabled    = true;
+      runBtn.textContent = '→ running...';
+
+      const result = await runAgent(tip, apiKey, {
+        onToolSpawn,
+        onToolResult,
+        onThinking,
+        onError: (err) => pushRow('error-row', `✗ ${err.message}`),
+      });
+
+      renderBrief(result);
+      runBtn.disabled    = false;
+      runBtn.textContent = '→ investigate';
+    });
+  </script>
+</body>
+</html>
