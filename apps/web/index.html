@@ -3,197 +3,255 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>fca</title>
+  <title>falcon</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      background: #0d0d0d;
-      color: #e0e0e0;
+      background: #fafafa;
+      color: #1a1a1a;
       font-family: 'JetBrains Mono', monospace;
-      font-size: 11px;
-      line-height: 1.6;
+      font-size: 13px;
+      line-height: 1.65;
     }
 
     #wrap {
-      max-width: 720px;
+      max-width: 700px;
       margin: 0 auto;
-      padding: 48px 24px;
+      padding: 64px 28px 96px;
+    }
+
+    /* ── Header ── */
+    #header {
+      margin-bottom: 48px;
+      border-bottom: 1px solid #e8e8e8;
+      padding-bottom: 20px;
+    }
+    #header h1 {
+      font-size: 16px;
+      font-weight: 600;
+      color: #1a1a1a;
+      letter-spacing: -0.2px;
+    }
+    #header p {
+      font-size: 12px;
+      color: #999;
+      margin-top: 2px;
     }
 
     /* ── Input ── */
     #tip {
       width: 100%;
-      background: #111;
-      border: 0.5px solid #1e1e1e;
-      color: #e0e0e0;
+      background: #fff;
+      border: 1px solid #ddd;
+      color: #1a1a1a;
       font-family: 'JetBrains Mono', monospace;
       font-size: 13px;
-      line-height: 1.6;
-      padding: 12px;
-      resize: vertical;
+      line-height: 1.65;
+      padding: 14px 16px;
+      resize: none;
       outline: none;
       display: block;
-      border-radius: 0;
+      border-radius: 4px;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
     }
-    #tip::placeholder { color: #444; }
-    #tip:focus { border-color: #2a2a2a; }
+    #tip::placeholder { color: #bbb; }
+    #tip:focus {
+      border-color: #aaa;
+      box-shadow: 0 0 0 3px rgba(0,0,0,0.04);
+    }
 
     #run {
-      margin-top: 8px;
-      background: none;
-      border: 0.5px solid #2a2a2a;
-      color: #888;
+      margin-top: 10px;
+      background: #1a1a1a;
+      border: none;
+      border-radius: 4px;
+      color: #fff;
       font-family: 'JetBrains Mono', monospace;
-      font-size: 11px;
-      padding: 6px 12px;
+      font-size: 12px;
+      font-weight: 500;
+      padding: 9px 18px;
       cursor: pointer;
-      border-radius: 0;
+      transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.12);
     }
-    #run:hover:not(:disabled) { border-color: #378ADD; color: #378ADD; }
-    #run:disabled { opacity: 0.4; cursor: not-allowed; }
+    #run:hover:not(:disabled) {
+      background: #333;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.16);
+      transform: translateY(-1px);
+    }
+    #run:active:not(:disabled) {
+      transform: translateY(0);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    }
+    #run:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
 
     /* ── Feed ── */
     #feed {
-      margin-top: 32px;
-      overflow-y: auto;
-      max-height: calc(100vh - 200px);
+      margin-top: 36px;
       display: flex;
       flex-direction: column;
     }
 
     .row {
-      padding: 2px 0 2px 12px;
+      padding: 4px 0 4px 13px;
       border-left: 2px solid transparent;
       font-family: 'JetBrains Mono', monospace;
-      font-size: 11px;
-      line-height: 1.6;
-      animation: fadein 150ms ease forwards;
+      font-size: 12.5px;
+      line-height: 1.65;
+      opacity: 0;
+      animation: slidein 160ms ease forwards;
+      transition: border-left-color 350ms ease;
     }
-    @keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes slidein {
+      from { opacity: 0; transform: translateY(4px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
 
-    .row.thinking      { border-left-color: #444;    color: #888; }
-    .row.tool-spawn    { border-left-color: #378ADD; color: #888; transition: border-left-color 400ms ease; }
-    .row.tool-spawn.resolved { border-left-color: #4a9e4a; }
-    .row.url           { border-left-color: #1e1e1e; color: #444; }
-    .row.url a         { color: #444; text-decoration: none; cursor: pointer; }
-    .row.url a:hover   { text-decoration: underline; }
-    .row.log-note      { border-left-color: #1e1e1e; color: #888; }
-    .row.log-flag      { border-left-color: #c0392b; color: #c0392b; }
-    .row.log-done      { border-left-color: #4a9e4a; color: #4a9e4a; }
-    .row.error-row     { border-left-color: #c0392b; color: #c0392b; }
-    .row.followup      { border-left: 2px solid transparent; color: #444; }
-    .row.spacer        { border: none; height: 8px; }
+    .row.thinking      { border-left-color: #ddd;    color: #999; }
+    .row.tool-spawn    { border-left-color: #4a90d9; color: #555; }
+    .row.tool-spawn.resolved { border-left-color: #3aaa5c; }
+    .row.log-note      { border-left-color: #eee;    color: #666; }
+    .row.log-flag      { border-left-color: #e05252; color: #c0392b; }
+    .row.log-done      { border-left-color: #3aaa5c; color: #2d8a4a; }
+    .row.error-row     { border-left-color: #e05252; color: #c0392b; }
+    .row.followup      { border-left: 2px solid transparent; color: #bbb; }
+    .row.spacer        { border: none; height: 14px; }
 
-    .blink { display: inline-block; animation: blink 1s step-end infinite; }
+    .blink { display: inline-block; color: #bbb; animation: blink 1s step-end infinite; }
     @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
 
-    .tool-name  { color: #e0e0e0; }
-    .tool-arrow { color: #888; }
-    .tool-url   { color: #444; }
-    .tool-input { color: #444; }
+    .tool-name  { color: #1a1a1a; font-weight: 500; }
+    .tool-arrow { color: #ccc; }
+    .tool-url   { color: #aaa; }
+    .tool-input { color: #aaa; }
 
     /* ── Brief ── */
-    #brief { margin-top: 32px; }
-    #brief hr { border: none; border-top: 1px solid #1e1e1e; margin-bottom: 20px; }
+    #brief { margin-top: 48px; }
 
-    .brief-section { margin-bottom: 16px; }
+    #brief hr {
+      border: none;
+      border-top: 1px solid #e8e8e8;
+      margin-bottom: 28px;
+    }
+
+    .brief-section {
+      display: grid;
+      grid-template-columns: 120px 1fr;
+      gap: 0 20px;
+      padding: 10px 0;
+      border-bottom: 1px solid #f0f0f0;
+      transition: background 0.15s ease;
+    }
+    .brief-section:last-child { border-bottom: none; }
+    .brief-section:hover { background: #f7f7f7; margin: 0 -8px; padding-left: 8px; padding-right: 8px; border-radius: 4px; }
+
     .brief-label {
-      font-size: 10px;
-      color: #444;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      font-weight: 400;
-      margin-bottom: 4px;
-    }
-    .brief-value { font-size: 11px; color: #e0e0e0; line-height: 1.6; }
-    .brief-value.confidence-high         { color: #c0392b; }
-    .brief-value.confidence-medium       { color: #b8860b; }
-    .brief-value.confidence-low          { color: #4a9e4a; }
-    .brief-value.confidence-insufficient { color: #444; }
-
-    .anomaly-row  { font-size: 11px; line-height: 1.6; color: #e0e0e0; }
-    .sev-high     { color: #c0392b; }
-    .sev-med      { color: #b8860b; }
-    .sev-low      { color: #4a9e4a; }
-    .anom-source  { color: #444; }
-
-    .statute-row  { font-size: 11px; line-height: 1.6; color: #e0e0e0; }
-    .statute-code { color: #378ADD; }
-
-    /* ── API key ── */
-    #api-row {
-      margin-top: 48px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-    #api-row label {
-      font-size: 10px;
-      color: #444;
-      font-family: 'JetBrains Mono', monospace;
-      cursor: default;
-    }
-    #apiKey {
-      flex: 1;
-      background: #111;
-      border: 0.5px solid #1e1e1e;
-      color: #888;
-      font-family: 'JetBrains Mono', monospace;
       font-size: 11px;
-      padding: 6px 8px;
-      outline: none;
-      border-radius: 0;
+      font-weight: 500;
+      color: #bbb;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding-top: 1px;
     }
-    #apiKey:focus { border-color: #2a2a2a; }
+    .brief-value {
+      font-size: 13px;
+      color: #1a1a1a;
+      line-height: 1.65;
+    }
+    .brief-value.confidence-high         { color: #c0392b; font-weight: 500; }
+    .brief-value.confidence-medium       { color: #b45309; font-weight: 500; }
+    .brief-value.confidence-low          { color: #2d8a4a; font-weight: 500; }
+    .brief-value.confidence-insufficient { color: #bbb;    font-weight: 500; }
+
+    .anomaly-row {
+      font-size: 12.5px;
+      line-height: 1.65;
+      color: #1a1a1a;
+      padding: 3px 0;
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .sev-badge {
+      font-size: 10px;
+      font-weight: 600;
+      padding: 1px 5px;
+      border-radius: 3px;
+      flex-shrink: 0;
+      letter-spacing: 0.04em;
+    }
+    .sev-high { background: #fef2f2; color: #c0392b; border: 1px solid #fca5a5; }
+    .sev-med  { background: #fffbeb; color: #b45309; border: 1px solid #fcd34d; }
+    .sev-low  { background: #f0fdf4; color: #2d8a4a; border: 1px solid #86efac; }
+    .anom-source { color: #bbb; font-size: 11px; }
+
+    .statute-row {
+      font-size: 12.5px;
+      line-height: 1.65;
+      color: #1a1a1a;
+      padding: 3px 0;
+      display: flex;
+      gap: 12px;
+      align-items: baseline;
+    }
+    .statute-code { color: #4a90d9; flex-shrink: 0; }
+
+    /* ── Live banner ── */
+    .live-banner {
+      font-size: 11.5px;
+      color: #aaa;
+      padding: 6px 0;
+      margin-bottom: 12px;
+    }
   </style>
 </head>
 <body>
   <div id="wrap">
+
+    <div id="header">
+      <h1>falcon</h1>
+      <p>False Claims Act investigation agent</p>
+    </div>
+
     <textarea
       id="tip"
       rows="4"
-      placeholder="enter tip — company name, NPI, alleged fraud type..."
+      placeholder="Enter a tip — company name, NPI, alleged fraud type..."
     ></textarea>
-    <button id="run">→ investigate</button>
+    <button id="run">Investigate →</button>
 
     <div id="feed"></div>
     <div id="brief"></div>
 
-    <div id="api-row">
-      <label for="apiKey">api key</label>
-      <input type="password" id="apiKey" placeholder="sk-ant-..." />
-    </div>
   </div>
 
   <script type="module">
     import { runAgent } from '@fca/agent';
 
-    // ── DOM refs ──────────────────────────────────────────────
     const params    = new URLSearchParams(window.location.search);
     const sessionId = params.get('session');
 
-    const feedEl   = document.getElementById('feed');
-    const briefEl  = document.getElementById('brief');
-    const tipEl    = document.getElementById('tip');
-    const runBtn   = document.getElementById('run');
-    const apiKeyEl = document.getElementById('apiKey');
+    const feedEl  = document.getElementById('feed');
+    const briefEl = document.getElementById('brief');
+    const tipEl   = document.getElementById('tip');
+    const runBtn  = document.getElementById('run');
+    const apiKey  = import.meta.env.VITE_ANTHROPIC_API_KEY;
 
-    const spawnRows = new Map(); // toolCall.id → row element
+    const spawnRows = new Map();
 
-    // ── Tool metadata ─────────────────────────────────────────
     const TOOL_META = {
-      fetch_usaspending:    { label: 'usaspending',    url: 'api.usaspending.gov',         conditional: false },
-      fetch_cms:            { label: 'cms · npi',      url: 'npiregistry.cms.hhs.gov',     conditional: false },
-      fetch_opencorporates: { label: 'opencorporates', url: 'api.opencorporates.com',       conditional: false },
-      fetch_edgar:          { label: 'edgar',          url: 'efts.sec.gov',                conditional: true  },
-      fetch_sam:            { label: 'sam.gov',        url: 'api.sam.gov',                 conditional: true  },
+      fetch_usaspending:    { label: 'usaspending',    url: 'api.usaspending.gov',     conditional: false },
+      fetch_cms:            { label: 'cms · npi',      url: 'npiregistry.cms.hhs.gov', conditional: false },
+      fetch_opencorporates: { label: 'opencorporates', url: 'api.opencorporates.com',   conditional: false },
+      fetch_edgar:          { label: 'edgar',          url: 'efts.sec.gov',            conditional: true  },
+      fetch_sam:            { label: 'sam.gov',        url: 'api.sam.gov',             conditional: true  },
     };
 
-    // ── Row helpers ───────────────────────────────────────────
     function pushRow(cls, html) {
       const div = document.createElement('div');
       div.className = `row ${cls}`;
@@ -209,14 +267,9 @@
       feedEl.appendChild(div);
     }
 
-    // ── Callbacks ─────────────────────────────────────────────
     function onToolSpawn(tc) {
       const meta = TOOL_META[tc.name] || { label: tc.name, url: '', conditional: false };
-
-      if (meta.conditional) {
-        pushRow('followup', '  └─ following up on anomaly');
-      }
-
+      if (meta.conditional) pushRow('followup', '  └─ following up on anomaly');
       const inputSummary = Object.values(tc.input || {}).filter(Boolean).join(', ');
       const row = pushRow(
         'tool-spawn',
@@ -231,18 +284,12 @@
 
     function onToolResult(tc, result) {
       const row = spawnRows.get(tc.id);
-      if (row) {
-        row.querySelector('.blink')?.remove();
-        row.classList.add('resolved');
-      }
-
+      if (row) { row.querySelector('.blink')?.remove(); row.classList.add('resolved'); }
       const notes = extractNotes(tc.name, tc.input, result);
       const flags = extractFlags(tc.name, result);
-
       for (const note of notes) pushRow('log-note', `  · ${note}`);
       for (const flag of flags) pushRow('log-flag', `  ⚑ ${flag}`);
       if (!result?.error) pushRow('log-done', '  ✓ done');
-
       pushSpacer();
     }
 
@@ -251,10 +298,8 @@
       if (line) pushRow('thinking', `▸ ${line.trim()}`);
     }
 
-    // ── Result extractors ─────────────────────────────────────
     function extractNotes(name, input, result) {
       if (result?.error) return [`error: ${result.error}`];
-
       switch (name) {
         case 'fetch_usaspending': {
           if (!result.found) return [result.message || 'no results'];
@@ -288,9 +333,7 @@
           if (!result.found) return [result.message || 'no filings found'];
           return [
             `${result.total_filings} total filings`,
-            result.recent_filings?.[0]
-              ? `latest: ${result.recent_filings[0].form_type} · ${result.recent_filings[0].filed}`
-              : null,
+            result.recent_filings?.[0] ? `latest: ${result.recent_filings[0].form_type} · ${result.recent_filings[0].filed}` : null,
           ].filter(Boolean);
         }
         case 'fetch_sam': {
@@ -318,7 +361,6 @@
       }
     }
 
-    // ── Case brief ────────────────────────────────────────────
     function renderBrief(result) {
       if (!result || result.error) {
         pushRow('error-row', `✗ ${result?.error || 'synthesis failed'}`);
@@ -326,70 +368,58 @@
       }
 
       briefEl.innerHTML = '';
-      briefEl.appendChild(Object.assign(document.createElement('hr')));
+      briefEl.appendChild(document.createElement('hr'));
 
       function section(label, html) {
         const wrap = document.createElement('div');
         wrap.className = 'brief-section';
-        wrap.innerHTML = `<div class="brief-label">${label}</div>${html}`;
+        wrap.innerHTML = `<div class="brief-label">${label}</div><div>${html}</div>`;
         briefEl.appendChild(wrap);
       }
 
-      section('CONFIDENCE',
+      section('Confidence',
         `<div class="brief-value confidence-${result.confidence || 'insufficient'}">${result.confidence || '—'}</div>`
       );
-
-      section('REASONING',
+      section('Reasoning',
         `<div class="brief-value">${result.reasoning || '—'}</div>`
       );
-
-      section('ENTITIES',
+      section('Entities',
         (result.entities || []).map(e =>
-          `<div class="brief-value">· ${e.name} <span style="color:#444">[${e.type}]</span></div>`
-        ).join('') || '<div class="brief-value" style="color:#444">none extracted</div>'
+          `<div class="brief-value">· ${e.name} <span style="color:#bbb;font-size:11px">[${e.type}]</span></div>`
+        ).join('') || '<div class="brief-value" style="color:#bbb">none extracted</div>'
       );
-
-      section('ANOMALIES',
+      section('Anomalies',
         (result.anomalies || []).map(a => {
           const cls   = a.severity === 'high' ? 'sev-high' : a.severity === 'medium' ? 'sev-med' : 'sev-low';
-          const badge = `[${a.severity === 'medium' ? 'MED' : a.severity.toUpperCase()}]`;
-          return `<div class="anomaly-row"><span class="${cls}">${badge}</span> ${a.description} <span class="anom-source">${a.source}</span></div>`;
-        }).join('') || '<div class="brief-value" style="color:#444">none found</div>'
+          const badge = a.severity === 'medium' ? 'MED' : a.severity.toUpperCase();
+          return `<div class="anomaly-row"><span class="sev-badge ${cls}">${badge}</span>${a.description}<span class="anom-source">${a.source}</span></div>`;
+        }).join('') || '<div class="brief-value" style="color:#bbb">none found</div>'
       );
-
-      section('STATUTES',
+      section('Statutes',
         (result.statutes || []).map(s =>
-          `<div class="statute-row"><span class="statute-code">${s.code}</span> ${s.description}</div>`
-        ).join('') || '<div class="brief-value" style="color:#444">—</div>'
+          `<div class="statute-row"><span class="statute-code">${s.code}</span>${s.description}</div>`
+        ).join('') || '<div class="brief-value" style="color:#bbb">—</div>'
       );
-
-      section('NEXT STEPS',
+      section('Next Steps',
         `<div class="brief-value">${result.next_steps || '—'}</div>`
       );
 
       briefEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
-    // ── Reset ─────────────────────────────────────────────────
     function reset() {
       feedEl.innerHTML  = '';
       briefEl.innerHTML = '';
       spawnRows.clear();
     }
 
-    // ── Session mode (Slack → web live stream) ────────────────
     if (sessionId) {
       reset();
-
-      const slackBotUrl =
-        document.querySelector('meta[name="slack-bot-url"]')?.content ||
-        'http://localhost:3001';
-
+      const slackBotUrl = document.querySelector('meta[name="slack-bot-url"]')?.content || 'http://localhost:3001';
       const banner = document.createElement('div');
-      banner.style.cssText = 'font-size:11px;color:#444;padding:2px 0;margin-bottom:12px;font-family:JetBrains Mono,monospace;';
-      banner.textContent = '⚡ live session · triggered from slack';
+      banner.className = 'live-banner';
+      banner.textContent = '⚡ Live session · triggered from Slack';
       feedEl.insertAdjacentElement('beforebegin', banner);
-
       const es = new EventSource(`${slackBotUrl}/api/session/${sessionId}`);
       es.onmessage = (e) => {
         const event = JSON.parse(e.data);
@@ -401,31 +431,25 @@
       es.onerror = () => pushRow('error-row', '✗ lost connection to agent stream');
     }
 
-    // ── Direct mode ───────────────────────────────────────────
     runBtn.addEventListener('click', async () => {
       const tip = tipEl.value.trim();
       if (!tip) return;
-
-      const apiKey = apiKeyEl.value.trim() || import.meta.env.VITE_ANTHROPIC_API_KEY;
       if (!apiKey) {
-        pushRow('error-row', '✗ api key required — enter below or set VITE_ANTHROPIC_API_KEY in .env');
+        pushRow('error-row', '✗ VITE_ANTHROPIC_API_KEY not set in .env');
         return;
       }
-
       reset();
       runBtn.disabled    = true;
-      runBtn.textContent = '→ running...';
-
+      runBtn.textContent = 'Running...';
       const result = await runAgent(tip, apiKey, {
         onToolSpawn,
         onToolResult,
         onThinking,
         onError: (err) => pushRow('error-row', `✗ ${err.message}`),
       });
-
       renderBrief(result);
       runBtn.disabled    = false;
-      runBtn.textContent = '→ investigate';
+      runBtn.textContent = 'Investigate →';
     });
   </script>
 </body>
