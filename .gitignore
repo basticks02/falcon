@@ -1,0 +1,22 @@
+# dependencies
+node_modules/
+
+# env
+.env
+.env.local
+.env.*.local
+
+# build output
+dist/
+.vite/
+
+# logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+
+# lockfiles (keep package-lock.json, ignore yarn/pnpm)
+yarn.lock
+pnpm-lock.yaml
