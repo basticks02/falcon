@@ -191,9 +191,114 @@ export async function fetch_opensanctions({ query, schema, dataset = "default" }
   } catch (e) { return { error: e.message }; }
 }
 
+export async function fetch_registrylookup({ company_name, jurisdiction, status }) {
+  const API_KEY = getEnv("REGISTRY_LOOKUP_API_KEY");
+  if (!API_KEY) return { error: "REGISTRY_LOOKUP_API_KEY not set. Free key (5,000 calls/month) at registry-lookup.com" };
+  const params = new URLSearchParams({ q: company_name, per_page: "10" });
+  if (jurisdiction) params.set("jurisdiction", jurisdiction);
+  if (status) params.set("status", status);
+  const url = apiUrl(`https://api.registry-lookup.com/v1/companies/search?${params}`, '/proxy/registrylookup');
+  try {
+    const res = await fetch(url, { headers: { "X-API-Key": API_KEY, "Accept": "application/json" } });
+    if (res.status === 401) return { error: "Invalid REGISTRY_LOOKUP_API_KEY" };
+    if (res.status === 429) return { error: "Registry Lookup rate limit exceeded" };
+    if (!res.ok) return { error: `Registry Lookup ${res.status}` };
+    const data = await res.json();
+    if (!data.results?.length) return { found: false, message: `No registry records for "${company_name}"` };
+    return {
+      found: true,
+      total: data.pagination?.total_results,
+      companies: data.results.map(c => ({
+        id: c.id,
+        name: c.legal_name,
+        jurisdiction: c.jurisdiction_code,
+        registry_number: c.registry_number,
+        status: c.status,
+        is_active: c.is_active,
+        incorporation_date: c.incorporation_date,
+        legal_form: c.legal_form,
+        address: c.registered_address,
+        lei: c.identifiers?.find(i => i.type === "LEI")?.value ?? null,
+        has_enriched_data: c.has_enriched_data
+      })),
+      facets: data.facets
+    };
+  } catch (e) { return { error: e.message }; }
+}
+
+export async function fetch_gleif({ company_name, lei }) {
+  if (!company_name && !lei) return { error: "Need company_name or lei" };
+
+  try {
+    let records;
+
+    if (lei) {
+      const url = apiUrl(`https://api.gleif.org/api/v1/lei-records/${encodeURIComponent(lei)}`, '/proxy/gleif');
+      const res = await fetch(url, { headers: { Accept: "application/json" } });
+      if (!res.ok) return { error: `GLEIF ${res.status}` };
+      const data = await res.json();
+      records = data.data ? [data.data] : [];
+    } else {
+      const url = apiUrl(
+        `https://api.gleif.org/api/v1/lei-records?filter[fullLegalName]=${encodeURIComponent(company_name)}&page[size]=5`,
+        '/proxy/gleif'
+      );
+      const res = await fetch(url, { headers: { Accept: "application/json" } });
+      if (!res.ok) return { error: `GLEIF ${res.status}` };
+      const data = await res.json();
+      records = data.data ?? [];
+    }
+
+    if (!records.length) return { found: false, message: `No GLEIF records for "${company_name || lei}"` };
+
+    // For the first match, fetch ownership links
+    const topLei = records[0].attributes?.lei;
+    let ownership = null;
+    if (topLei) {
+      const ownerUrl = apiUrl(
+        `https://api.gleif.org/api/v1/lei-records/${topLei}/direct-parents?page[size]=3`,
+        '/proxy/gleif'
+      );
+      const ownerRes = await fetch(ownerUrl, { headers: { Accept: "application/json" } });
+      if (ownerRes.ok) {
+        const ownerData = await ownerRes.json();
+        ownership = (ownerData.data ?? []).map(p => ({
+          lei: p.attributes?.lei,
+          name: p.attributes?.entity?.legalName?.name,
+          country: p.attributes?.entity?.legalAddress?.country,
+          status: p.attributes?.entity?.status
+        }));
+      }
+    }
+
+    return {
+      found: true,
+      entities: records.map(r => {
+        const a = r.attributes ?? {};
+        const e = a.entity ?? {};
+        return {
+          lei: a.lei,
+          name: e.legalName?.name,
+          other_names: (e.otherNames ?? []).map(n => n.name),
+          jurisdiction: e.legalJurisdiction,
+          category: e.category,
+          status: e.status,
+          registration_status: a.registration?.status,
+          registered_at: a.registration?.initialRegistrationDate,
+          last_updated: a.registration?.lastUpdateDate,
+          next_renewal: a.registration?.nextRenewalDate,
+          country: e.legalAddress?.country,
+          managing_lou: a.registration?.managingLou
+        };
+      }),
+      direct_parents: ownership
+    };
+  } catch (e) { return { error: e.message }; }
+}
+
 // Tool executor – maps Claude's tool_use name to the right function
 export async function executeTool({ name, input }) {
-  const map = { fetch_usaspending, fetch_cms, fetch_opencorporates, fetch_edgar, fetch_sam, fetch_opensanctions };
+  const map = { fetch_usaspending, fetch_cms, fetch_opencorporates, fetch_registrylookup, fetch_edgar, fetch_sam, fetch_opensanctions, fetch_gleif };
   const fn = map[name];
   if (!fn) return { error: `Unknown tool: ${name}` };
   try { return await fn(input); }

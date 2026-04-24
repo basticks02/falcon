@@ -9,11 +9,13 @@ RULES – follow exactly:
    - Dollar amounts, date ranges, agency names, DUNS/UEI numbers
 
 2. TOOL SELECTION LOGIC
-   - Company name found → ALWAYS call fetch_usaspending + fetch_opencorporates
+   - Company name found → ALWAYS call fetch_usaspending + fetch_opencorporates + fetch_registrylookup + fetch_gleif
    - NPI number found OR medical context (Medicare/Medicaid/HHS/DME) → call fetch_cms
-   - OpenCorporates returns shell structure or suspicious parent → call fetch_edgar
+   - OpenCorporates OR fetch_registrylookup returns shell structure or suspicious parent → call fetch_edgar
    - USASpending returns contracts AND another anomaly already exists → call fetch_sam
    - Any company name or individual name → call fetch_opensanctions in parallel with other lookups
+   - LEI number found in tip → call fetch_gleif with the lei parameter
+   - fetch_gleif LAPSED registration + active contracts = anomaly
    - Never call fetch_cms without medical context
    - Never call fetch_edgar if OpenCorporates found nothing
 
@@ -27,6 +29,8 @@ RULES – follow exactly:
    - Parent company or registered agent matches a debarred entity
    - Active SAM.gov registration with exclusion flag on related entity
    - Multiple LLCs sharing a registered agent that dissolved post-audit
+   - GLEIF registration_status = LAPSED while entity holds active federal contracts
+   - GLEIF entity jurisdiction is a known secrecy/shell-company jurisdiction (BVI, Cayman, Panama, etc.)
 
 4. DO NOT FLAG:
    - High contract values alone
@@ -93,6 +97,19 @@ export const TOOL_DEFINITIONS = [
     }
   },
   {
+    name: "fetch_registrylookup",
+    description: "Search 521M+ legal entities across 309 jurisdictions via Registry Lookup (powered by Veridion). Call in parallel with fetch_opencorporates whenever a company name is present. Returns legal name, jurisdiction, registry number, incorporation date, active status, registered address, and LEI identifier if available. Broader global coverage than OpenCorporates.",
+    input_schema: {
+      type: "object",
+      properties: {
+        company_name: { type: "string", description: "Full or partial company name" },
+        jurisdiction: { type: "string", description: "Jurisdiction code e.g. 'gb', 'us-de', 'de'" },
+        status: { type: "string", description: "Filter by status: 'Active' or 'Dissolved'" }
+      },
+      required: ["company_name"]
+    }
+  },
+  {
     name: "fetch_edgar",
     description: "Search SEC EDGAR filings. ONLY call if OpenCorporates returned a shell structure or parent company worth tracing. Returns filing history, named directors, related entities.",
     input_schema: {
@@ -111,6 +128,17 @@ export const TOOL_DEFINITIONS = [
       properties: {
         company_name: { type: "string" },
         uei: { type: "string", description: "UEI from USASpending results if available" }
+      }
+    }
+  },
+  {
+    name: "fetch_gleif",
+    description: "Look up a company in the GLEIF global LEI (Legal Entity Identifier) registry. Call for any company name alongside fetch_usaspending and fetch_opencorporates. Returns LEI, entity status, registration status (ISSUED/LAPSED), jurisdiction, category, and direct parent ownership chain. No API key required.",
+    input_schema: {
+      type: "object",
+      properties: {
+        company_name: { type: "string", description: "Full or partial legal company name" },
+        lei: { type: "string", description: "20-character LEI code if known" }
       }
     }
   },

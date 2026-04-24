@@ -36,6 +36,22 @@ export default defineConfig({
         configure: (proxy) => {
           proxy.on('proxyReq', (proxyReq) => { proxyReq.removeHeader('origin'); });
         }
+      },
+      '/proxy/registrylookup': {
+        target: 'https://api.registry-lookup.com',
+        changeOrigin: true,
+        rewrite: (p) => p.replace(/^\/proxy\/registrylookup/, ''),
+        configure: (proxy) => {
+          proxy.on('proxyReq', (proxyReq) => { proxyReq.removeHeader('origin'); });
+        }
+      },
+      '/proxy/gleif': {
+        target: 'https://api.gleif.org',
+        changeOrigin: true,
+        rewrite: (p) => p.replace(/^\/proxy\/gleif/, ''),
+        configure: (proxy) => {
+          proxy.on('proxyReq', (proxyReq) => { proxyReq.removeHeader('origin'); });
+        }
       }
     }
   },
