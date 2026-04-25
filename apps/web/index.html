@@ -3,306 +3,958 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>falcon</title>
+  <title>falcon · FCA Agent</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;1,400&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+    :root {
+      --bg:       #fdfdfd;
+      --surface:  #f6f6f7;
+      --border:   #e4e4e7;
+      --border-2: #cdcdd4;
+      --txt:      #18181b;
+      --txt-2:    #52525b;
+      --txt-3:    #a1a1aa;
+      --green:    #16a34a;
+      --green-bg: #dcfce7;
+      --red:      #dc2626;
+      --red-bg:   #fee2e2;
+      --amber:    #d97706;
+      --blue:     #2563eb;
+      --mono:     'JetBrains Mono', 'Cascadia Code', monospace;
+      --serif:    'Crimson Pro', Georgia, serif;
+    }
+
+    html { scroll-behavior: smooth; }
     body {
-      background: #fafafa;
-      color: #1a1a1a;
-      font-family: 'JetBrains Mono', monospace;
+      background: var(--bg);
+      color: var(--txt);
+      font-family: var(--mono);
       font-size: 13px;
       line-height: 1.65;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
     }
 
+    /* ── Split layout ── */
+    #layout {
+      display: flex;
+      min-height: 100vh;
+      transition: none;
+    }
+    #main {
+      flex: 1;
+      min-width: 0;
+      transition: flex 0.38s cubic-bezier(0.4, 0, 0.2, 1);
+    }
     #wrap {
-      max-width: 700px;
+      max-width: 660px;
       margin: 0 auto;
-      padding: 64px 28px 96px;
+      padding: 44px 28px 120px;
+      transition: max-width 0.38s cubic-bezier(0.4, 0, 0.2, 1),
+                  padding 0.38s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    body.split-open #wrap {
+      max-width: 100%;
+      padding-right: 32px;
     }
 
-    /* ── Header ── */
-    #header {
-      margin-bottom: 48px;
-      border-bottom: 1px solid #e8e8e8;
-      padding-bottom: 20px;
-    }
-    #header h1 {
-      font-size: 16px;
-      font-weight: 600;
-      color: #1a1a1a;
-      letter-spacing: -0.2px;
-    }
-    #header p {
-      font-size: 12px;
-      color: #999;
-      margin-top: 2px;
-    }
-
-    /* ── Input ── */
-    #tip {
-      width: 100%;
+    /* ── LaTeX panel ── */
+    #latex-panel {
+      width: 0;
+      overflow: hidden;
+      border-left: 1px solid var(--border);
       background: #fff;
-      border: 1px solid #ddd;
-      color: #1a1a1a;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 13px;
-      line-height: 1.65;
-      padding: 14px 16px;
-      resize: none;
-      outline: none;
-      display: block;
-      border-radius: 4px;
-      transition: border-color 0.15s ease, box-shadow 0.15s ease;
-    }
-    #tip::placeholder { color: #bbb; }
-    #tip:focus {
-      border-color: #aaa;
-      box-shadow: 0 0 0 3px rgba(0,0,0,0.04);
-    }
-
-    #run {
-      margin-top: 10px;
-      background: #1a1a1a;
-      border: none;
-      border-radius: 4px;
-      color: #fff;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 12px;
-      font-weight: 500;
-      padding: 9px 18px;
-      cursor: pointer;
-      transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.12);
-    }
-    #run:hover:not(:disabled) {
-      background: #333;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.16);
-      transform: translateY(-1px);
-    }
-    #run:active:not(:disabled) {
-      transform: translateY(0);
-      box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-    }
-    #run:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
-
-    /* ── Feed ── */
-    #feed {
-      margin-top: 36px;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      transition: width 0.38s cubic-bezier(0.4, 0, 0.2, 1);
       display: flex;
       flex-direction: column;
+      flex-shrink: 0;
     }
-
-    .row {
-      padding: 4px 0 4px 13px;
-      border-left: 2px solid transparent;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 12.5px;
-      line-height: 1.65;
-      opacity: 0;
-      animation: slidein 160ms ease forwards;
-      transition: border-left-color 350ms ease;
+    body.split-open #latex-panel {
+      width: 50vw;
+      overflow-y: auto;
     }
-    @keyframes slidein {
-      from { opacity: 0; transform: translateY(4px); }
-      to   { opacity: 1; transform: translateY(0); }
+    .latex-panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      flex-shrink: 0;
+      white-space: nowrap;
+      gap: 10px;
     }
-
-    .row.thinking      { border-left-color: #ddd;    color: #999; }
-    .row.tool-spawn    { border-left-color: #4a90d9; color: #555; }
-    .row.tool-spawn.resolved { border-left-color: #3aaa5c; }
-    .row.log-note      { border-left-color: #eee;    color: #666; }
-    .row.log-flag      { border-left-color: #e05252; color: #c0392b; }
-    .row.log-done      { border-left-color: #3aaa5c; color: #2d8a4a; }
-    .row.error-row     { border-left-color: #e05252; color: #c0392b; }
-    .row.followup      { border-left: 2px solid transparent; color: #bbb; }
-    .row.spacer        { border: none; height: 14px; }
-
-    .blink { display: inline-block; color: #bbb; animation: blink 1s step-end infinite; }
-    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
-
-    .tool-name  { color: #1a1a1a; font-weight: 500; }
-    .tool-arrow { color: #ccc; }
-    .tool-url   { color: #aaa; }
-    .tool-input { color: #aaa; }
-
-    /* ── Brief ── */
-    #brief { margin-top: 48px; }
-
-    #brief hr {
-      border: none;
-      border-top: 1px solid #e8e8e8;
-      margin-bottom: 28px;
+    .latex-panel-title {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--txt-2);
     }
-
-    .brief-section {
-      display: grid;
-      grid-template-columns: 120px 1fr;
-      gap: 0 20px;
-      padding: 10px 0;
-      border-bottom: 1px solid #f0f0f0;
-      transition: background 0.15s ease;
+    .latex-panel-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
     }
-    .brief-section:last-child { border-bottom: none; }
-    .brief-section:hover { background: #f7f7f7; margin: 0 -8px; padding-left: 8px; padding-right: 8px; border-radius: 4px; }
-
-    .brief-label {
+    .panel-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-family: var(--mono);
       font-size: 11px;
       font-weight: 500;
-      color: #bbb;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      padding-top: 1px;
+      padding: 5px 10px;
+      border-radius: 5px;
+      border: 1px solid var(--border-2);
+      background: var(--bg);
+      color: var(--txt-2);
+      cursor: pointer;
+      transition: background 0.12s, color 0.12s;
+      white-space: nowrap;
     }
-    .brief-value {
-      font-size: 13px;
-      color: #1a1a1a;
-      line-height: 1.65;
+    .panel-btn:hover { background: var(--surface); color: var(--txt); }
+    .panel-btn.primary { background: var(--txt); color: #fff; border-color: var(--txt); }
+    .panel-btn.primary:hover { background: #333; }
+    .panel-close {
+      display: flex; align-items: center; justify-content: center;
+      width: 24px; height: 24px;
+      border: none; background: none; cursor: pointer;
+      color: var(--txt-3); font-size: 16px; border-radius: 4px;
+      transition: color 0.12s, background 0.12s;
     }
-    .brief-value.confidence-high         { color: #c0392b; font-weight: 500; }
-    .brief-value.confidence-medium       { color: #b45309; font-weight: 500; }
-    .brief-value.confidence-low          { color: #2d8a4a; font-weight: 500; }
-    .brief-value.confidence-insufficient { color: #bbb;    font-weight: 500; }
+    .panel-close:hover { color: var(--txt); background: var(--surface); }
 
-    .anomaly-row {
-      font-size: 12.5px;
-      line-height: 1.65;
+    /* LaTeX document render */
+    #latex-body {
+      padding: 32px 40px 60px;
+      font-family: var(--serif);
+      font-size: 12pt;
+      line-height: 1.75;
       color: #1a1a1a;
-      padding: 3px 0;
-      display: flex;
-      align-items: baseline;
-      gap: 8px;
-      flex-wrap: wrap;
+      min-width: 0;
     }
-    .sev-badge {
-      font-size: 10px;
+    .ltx-doc {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    .ltx-title {
+      font-size: 18pt;
+      font-weight: 600;
+      text-align: center;
+      margin-bottom: 4px;
+    }
+    .ltx-subtitle {
+      font-size: 10pt;
+      color: #666;
+      text-align: center;
+      font-family: var(--mono);
+      margin-bottom: 20px;
+    }
+    .ltx-rule { border: none; border-top: 1px solid #bbb; margin: 16px 0; }
+    .ltx-section {
+      font-size: 11pt;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin: 22px 0 8px;
+      color: #1a1a1a;
+      font-family: var(--mono);
+    }
+    .ltx-body { font-size: 11.5pt; color: #222; margin-bottom: 10px; }
+    .ltx-item {
+      display: flex;
+      gap: 12px;
+      margin: 5px 0;
+      font-size: 11pt;
+      align-items: flex-start;
+    }
+    .ltx-item-label {
+      font-family: var(--mono);
+      font-size: 9.5pt;
+      color: #555;
+      flex-shrink: 0;
+      margin-top: 1px;
+      min-width: 60px;
+    }
+    .ltx-badge {
+      display: inline-block;
+      font-family: var(--mono);
+      font-size: 9pt;
       font-weight: 600;
       padding: 1px 5px;
       border-radius: 3px;
-      flex-shrink: 0;
-      letter-spacing: 0.04em;
+      margin-right: 6px;
     }
-    .sev-high { background: #fef2f2; color: #c0392b; border: 1px solid #fca5a5; }
-    .sev-med  { background: #fffbeb; color: #b45309; border: 1px solid #fcd34d; }
-    .sev-low  { background: #f0fdf4; color: #2d8a4a; border: 1px solid #86efac; }
-    .anom-source { color: #bbb; font-size: 11px; }
+    .ltx-badge-high   { background: #fee2e2; color: #dc2626; }
+    .ltx-badge-medium { background: #fef3c7; color: #d97706; }
+    .ltx-badge-low    { background: #dcfce7; color: #16a34a; }
+    .ltx-footer {
+      margin-top: 32px;
+      padding-top: 12px;
+      border-top: 1px solid #ddd;
+      font-size: 9pt;
+      color: #999;
+      font-family: var(--mono);
+    }
+    .ltx-conf {
+      font-family: var(--mono);
+      font-size: 10pt;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 4px;
+      display: inline-block;
+    }
+    .ltx-conf.high   { background: #fee2e2; color: #dc2626; }
+    .ltx-conf.medium { background: #fef3c7; color: #d97706; }
+    .ltx-conf.low    { background: #dcfce7; color: #16a34a; }
+    .ltx-conf.insufficient { background: #f4f4f5; color: #71717a; }
 
-    .statute-row {
-      font-size: 12.5px;
-      line-height: 1.65;
-      color: #1a1a1a;
-      padding: 3px 0;
+    /* ── Header ── */
+    #header {
       display: flex;
-      gap: 12px;
-      align-items: baseline;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 30px;
     }
-    .statute-code { color: #4a90d9; flex-shrink: 0; }
+    .logo {
+      width: 24px; height: 24px;
+      background: var(--txt);
+      border-radius: 5px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 600; color: #fff;
+      flex-shrink: 0;
+    }
+    .header-name { font-size: 13px; font-weight: 600; color: var(--txt); }
+    .header-sep   { color: var(--border-2); }
+    .header-sub   { font-size: 12px; color: var(--txt-3); }
+
+    /* ── Input ── */
+    #input-wrap {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px 10px;
+      margin-bottom: 28px;
+      background: var(--bg);
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    #input-wrap:focus-within {
+      border-color: var(--border-2);
+      box-shadow: 0 0 0 3px rgba(0,0,0,0.04);
+    }
+    #tip {
+      width: 100%; border: none; outline: none;
+      background: transparent;
+      font-family: var(--mono);
+      font-size: 12.5px; color: var(--txt);
+      line-height: 1.7; resize: none; display: block;
+    }
+    #tip::placeholder { color: var(--txt-3); }
+    .input-footer {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-top: 10px; padding-top: 10px;
+      border-top: 1px solid var(--border); gap: 12px;
+    }
+    .sources-text { font-size: 11px; color: var(--txt-3); }
+
+    #run {
+      display: inline-flex; align-items: center; gap: 7px;
+      background: var(--txt); border: none; border-radius: 5px;
+      color: #fff; font-family: var(--mono);
+      font-size: 12px; font-weight: 500;
+      padding: 7px 14px; cursor: pointer;
+      transition: background 0.12s, transform 0.1s;
+      white-space: nowrap; flex-shrink: 0;
+    }
+    #run:hover:not(:disabled) { background: #2d2d38; transform: translateY(-1px); }
+    #run:active:not(:disabled) { transform: translateY(0); }
+    #run:disabled { opacity: 0.38; cursor: not-allowed; transform: none; }
+    #run.done { background: var(--green); }
+
+    .btn-spinner {
+      width: 11px; height: 11px;
+      border: 1.5px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.65s linear infinite;
+    }
+
+    /* ── Timeline ── */
+    #trace {}
+
+    .tl-step {
+      display: flex;
+      gap: 14px;
+      animation: fade-up 0.18s ease both;
+    }
+
+    /* ── Left rail ── */
+    .tl-left {
+      display: flex; flex-direction: column; align-items: center;
+      flex-shrink: 0; width: 16px;
+    }
+
+    .tl-circle {
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.25s, border-color 0.25s;
+    }
+    /* pending: tiny hollow ring */
+    .tl-circle.pending {
+      background: var(--bg);
+      border: 1.5px dashed var(--border-2);
+    }
+    /* active: spinning */
+    .tl-circle.active {
+      background: var(--bg);
+      border: 2px solid var(--border);
+      border-top-color: var(--txt-2);
+      animation: spin 0.9s linear infinite;
+    }
+    /* done: green fill + white checkmark */
+    .tl-circle.done {
+      background: var(--green);
+      border: none;
+    }
+    .tl-circle.done::after {
+      content: '';
+      display: block;
+      width: 6px; height: 4px;
+      border-left: 1.5px solid #fff;
+      border-bottom: 1.5px solid #fff;
+      transform: rotate(-46deg) translate(1px, -1px);
+    }
+    .tl-circle.error {
+      background: var(--red-bg);
+      border: 1.5px solid var(--red);
+    }
+    .tl-circle.error::after {
+      content: '×';
+      font-size: 10px; line-height: 1;
+      color: var(--red);
+    }
+
+    /* dashed connector line */
+    .tl-line {
+      flex: 1; width: 1px;
+      border-left: 1.5px dashed var(--border-2);
+      min-height: 10px; margin: 3px 0;
+    }
+    .tl-step:last-child .tl-line { display: none; }
+
+    /* ── Right content ── */
+    .tl-right {
+      flex: 1; min-width: 0;
+      padding-bottom: 18px;
+    }
+    .tl-step:last-child .tl-right { padding-bottom: 0; }
+
+    .tl-title {
+      font-size: 13px; font-weight: 600;
+      color: var(--txt); line-height: 1.4;
+      padding-top: 0px; margin-bottom: 8px;
+    }
+    .tl-title.muted {
+      font-weight: 400; color: var(--txt-2); font-style: italic;
+    }
+
+    /* ── Chips (log lines) ── */
+    .tl-chips { display: flex; flex-direction: column; }
+
+    .tl-chip {
+      border-bottom: 1px solid var(--border);
+      overflow: hidden;
+    }
+    .tl-chips .tl-chip:first-child { border-top: 1px solid var(--border); }
+
+    .chip-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 0;
+      cursor: pointer;
+      transition: background 0.1s;
+      user-select: none;
+    }
+    .chip-row:hover { background: var(--surface); margin: 0 -28px; padding: 7px 28px; }
+
+    .chip-status-icon {
+      flex-shrink: 0;
+      width: 14px; height: 14px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .chip-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      transition: background 0.2s;
+    }
+    .chip-dot.pending  { background: var(--txt-3); }
+    .chip-dot.resolved { background: var(--green); }
+    .chip-dot.empty    { background: var(--txt-3); opacity: 0.5; }
+    .chip-dot.error    { background: var(--red); }
+    .chip-inline-spinner {
+      width: 11px; height: 11px;
+      border: 1.5px solid var(--border-2);
+      border-top-color: var(--txt-2);
+      border-radius: 50%;
+      animation: spin 0.75s linear infinite;
+    }
+
+    .chip-text {
+      flex: 1; min-width: 0;
+      font-size: 12.5px; color: var(--txt-2);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .chip-text .cn { color: var(--txt); font-weight: 500; }
+    .chip-text .cp { color: var(--txt-3); }
+    .chip-text .ce { color: var(--red); font-size: 11.5px; }
+    .chip-text .cs { color: var(--txt-3); font-size: 11.5px; }
+    .chip-text .url-link {
+      color: var(--txt-3); font-size: 11px; text-decoration: none;
+      font-family: var(--mono);
+    }
+    .chip-text .url-link:hover { color: var(--blue); }
+
+    .chip-chevron {
+      font-size: 10px; color: var(--txt-3); flex-shrink: 0;
+      transition: transform 0.2s;
+      line-height: 1;
+    }
+    .tl-chip.open .chip-chevron { transform: rotate(180deg); }
+
+    /* ── Chip dropdown detail ── */
+    .chip-detail {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.28s cubic-bezier(0.4,0,0.2,1), opacity 0.2s ease;
+      opacity: 0;
+    }
+    .tl-chip.open .chip-detail { max-height: 340px; opacity: 1; }
+
+    .chip-detail-inner {
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      margin: 0 0 9px;
+      overflow: hidden;
+    }
+    .detail-block {
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .detail-block:last-child { border-bottom: none; }
+    .detail-lbl {
+      font-size: 10px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.07em;
+      color: var(--txt-3); margin-bottom: 4px;
+    }
+    .detail-code {
+      font-size: 11px; color: var(--txt-2);
+      white-space: pre-wrap; word-break: break-all;
+      max-height: 130px; overflow-y: auto;
+      line-height: 1.6;
+    }
+    .detail-code::-webkit-scrollbar { width: 3px; }
+    .detail-code::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 2px; }
+
+    /* ── Notes (text below chips) ── */
+    .tl-notes {
+      margin-top: 9px;
+      display: flex; flex-direction: column; gap: 2px;
+    }
+    .note-line {
+      font-size: 12px; color: var(--txt-2);
+      line-height: 1.55;
+      display: flex; align-items: baseline; gap: 6px;
+    }
+    .note-line::before { content: '·'; color: var(--txt-3); flex-shrink: 0; }
+    .note-line.flag { color: var(--red); }
+    .note-line.flag::before { content: '⚑'; }
+
+    /* thinking italic */
+    .tl-thinking {
+      font-size: 12px; font-style: italic; color: var(--txt-3);
+      padding-top: 1px; margin-bottom: 6px;
+    }
+
+    /* ── Synthesis section ── */
+    #brief { margin-top: 6px; }
+
+    .synth-header {
+      display: flex; align-items: center; gap: 12px;
+      margin-bottom: 14px;
+      animation: fade-up 0.18s ease both;
+    }
+    .synth-label {
+      font-size: 10px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.08em;
+      color: var(--txt-3); white-space: nowrap;
+    }
+    .synth-rule { flex: 1; height: 1px; background: var(--border); }
+
+    .brief-card {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      animation: fade-up 0.18s ease both;
+    }
+    .brief-row {
+      display: grid;
+      grid-template-columns: 88px 1fr;
+      gap: 12px; padding: 11px 15px;
+      border-bottom: 1px solid var(--border);
+      transition: background 0.1s;
+    }
+    .brief-row:last-child { border-bottom: none; }
+    .brief-row:hover { background: var(--surface); }
+    .brief-lbl {
+      font-size: 10px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.06em;
+      color: var(--txt-3); padding-top: 2px;
+    }
+    .brief-val { font-size: 12.5px; color: var(--txt); line-height: 1.6; }
+
+    .conf-chip {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 2px 9px 2px 7px;
+      border-radius: 20px; font-size: 11.5px; font-weight: 600;
+      border: 1px solid transparent;
+    }
+    .conf-chip::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+    .conf-high   { background: var(--red-bg);  color: var(--red);   border-color: #fca5a5; }
+    .conf-medium { background: #fef3c7;         color: var(--amber); border-color: #fde68a; }
+    .conf-low    { background: var(--green-bg); color: var(--green); border-color: #86efac; }
+    .conf-insuf  { background: var(--surface);  color: var(--txt-3); border-color: var(--border); }
+
+    .anom-item { display: flex; align-items: flex-start; gap: 7px; padding: 5px 0; }
+    .anom-item + .anom-item { border-top: 1px solid var(--border); }
+    .sev-b {
+      font-size: 9.5px; font-weight: 700; padding: 1px 5px;
+      border-radius: 3px; text-transform: uppercase; letter-spacing: 0.04em;
+      flex-shrink: 0; margin-top: 2px;
+    }
+    .sev-h { background: var(--red-bg);  color: var(--red);   border: 1px solid #fca5a5; }
+    .sev-m { background: #fef3c7;        color: var(--amber); border: 1px solid #fde68a; }
+    .sev-l { background: var(--green-bg);color: var(--green); border: 1px solid #86efac; }
+    .anom-desc { font-size: 12.5px; color: var(--txt); }
+    .anom-src  { font-size: 11px; color: var(--txt-3); margin-top: 1px; }
+
+    .statute-item { display: flex; gap: 10px; padding: 3px 0; align-items: baseline; }
+    .statute-code { color: var(--blue); font-size: 11.5px; flex-shrink: 0; }
+
+    .entity-chip {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 20px; padding: 2px 9px;
+      font-size: 12px; margin: 2px 3px 2px 0;
+    }
+    .entity-type { font-size: 9.5px; color: var(--txt-3); }
+
+    /* ── View LaTeX button ── */
+    .latex-trigger-wrap {
+      display: flex; justify-content: flex-end;
+      margin-top: 16px;
+      animation: fade-up 0.18s ease both;
+    }
+    .latex-trigger {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-family: var(--mono); font-size: 11.5px; font-weight: 500;
+      padding: 7px 14px;
+      border: 1px solid var(--border-2);
+      border-radius: 6px;
+      background: var(--bg);
+      color: var(--txt-2);
+      cursor: pointer;
+      transition: background 0.12s, color 0.12s, border-color 0.12s, transform 0.1s;
+    }
+    .latex-trigger:hover {
+      background: var(--txt); color: #fff; border-color: var(--txt);
+      transform: translateY(-1px);
+    }
+    .latex-trigger svg { opacity: 0.6; }
+    .latex-trigger:hover svg { opacity: 1; }
 
     /* ── Live banner ── */
     .live-banner {
-      font-size: 11.5px;
-      color: #aaa;
-      padding: 6px 0;
-      margin-bottom: 12px;
+      display: flex; align-items: center; gap: 7px;
+      font-size: 11.5px; color: var(--blue);
+      background: #eff6ff; border: 1px solid #bfdbfe;
+      border-radius: 5px; padding: 5px 11px; margin-bottom: 14px;
+    }
+    .live-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--blue); animation: pulse-dot 1.3s ease-in-out infinite;
+    }
+
+    /* ── Animations ── */
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    @keyframes fade-up {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.4; }
+    }
+    @keyframes flash-green {
+      0%   { border-left: 2px solid var(--green); }
+      100% { border-left: 2px solid transparent; }
+    }
+
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 2px; }
+
+    /* ── Print styles (PDF export) ── */
+    @media print {
+      #main { display: none !important; }
+      #latex-panel {
+        width: 100% !important;
+        height: auto !important;
+        position: static !important;
+        border: none !important;
+        overflow: visible !important;
+      }
+      .latex-panel-header { display: none !important; }
+      #latex-body { padding: 0 !important; }
     }
   </style>
 </head>
 <body>
-  <div id="wrap">
+  <div id="layout">
 
-    <div id="header">
-      <h1>falcon</h1>
-      <p>False Claims Act investigation agent</p>
+    <!-- Main content -->
+    <div id="main">
+      <div id="wrap">
+
+        <div id="header">
+          <div class="logo">fc</div>
+          <span class="header-name">falcon</span>
+          <span class="header-sep">/</span>
+          <span class="header-sub">False Claims Act investigation agent</span>
+        </div>
+
+        <div id="input-wrap">
+          <textarea
+            id="tip"
+            rows="3"
+            placeholder="company name, NPI, alleged fraud type..."
+          ></textarea>
+          <div class="input-footer">
+            <span class="sources-text">usaspending · cms · gleif · ofac · opensanctions · registry · edgar · sam</span>
+            <button id="run">
+              <span id="btn-label">Investigate</span><span id="btn-arrow"> →</span>
+            </button>
+          </div>
+        </div>
+
+        <div id="trace"></div>
+        <div id="brief"></div>
+
+      </div>
     </div>
 
-    <textarea
-      id="tip"
-      rows="4"
-      placeholder="Enter a tip — company name, NPI, alleged fraud type..."
-    ></textarea>
-    <button id="run">Investigate →</button>
-
-    <div id="feed"></div>
-    <div id="brief"></div>
+    <!-- LaTeX split panel -->
+    <div id="latex-panel">
+      <div class="latex-panel-header">
+        <span class="latex-panel-title">LaTeX Report</span>
+        <div class="latex-panel-actions">
+          <button class="panel-btn" id="btn-copy-tex" onclick="copyTex()">
+            <svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor"><path d="M4 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zm2-1a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1z"/><path d="M2 5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-1h-1v1H2V6h1V5z"/></svg>
+            Copy .tex
+          </button>
+          <button class="panel-btn" id="btn-dl-tex" onclick="downloadTex()">
+            <svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0a.5.5 0 0 1 .5.5v9.793l2.146-2.147a.5.5 0 0 1 .708.708l-3 3a.5.5 0 0 1-.708 0l-3-3a.5.5 0 0 1 .708-.708L7.5 10.293V.5A.5.5 0 0 1 8 0z"/><path d="M3 14.5A1.5 1.5 0 0 0 4.5 16h7a1.5 1.5 0 0 0 1.5-1.5v-2h-1v2a.5.5 0 0 1-.5.5h-7a.5.5 0 0 1-.5-.5v-2H3z"/></svg>
+            Download .tex
+          </button>
+          <button class="panel-btn primary" onclick="exportPdf()">
+            <svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor"><path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2M9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5z"/></svg>
+            Export PDF
+          </button>
+          <button class="panel-close" onclick="closeLatex()" title="Close">×</button>
+        </div>
+      </div>
+      <div id="latex-body"></div>
+    </div>
 
   </div>
 
   <script type="module">
     import { runAgent } from '@fca/agent';
 
-    const params    = new URLSearchParams(window.location.search);
-    const sessionId = params.get('session');
+    /* ── DOM refs ─────────────────────────────────── */
+    const params     = new URLSearchParams(window.location.search);
+    const sessionId  = params.get('session');
+    const traceEl    = document.getElementById('trace');
+    const briefEl    = document.getElementById('brief');
+    const tipEl      = document.getElementById('tip');
+    const runBtn     = document.getElementById('run');
+    const btnLabel   = document.getElementById('btn-label');
+    const btnArrow   = document.getElementById('btn-arrow');
+    const latexBody  = document.getElementById('latex-body');
+    const apiKey     = import.meta.env.VITE_ANTHROPIC_API_KEY;
 
-    const feedEl  = document.getElementById('feed');
-    const briefEl = document.getElementById('brief');
-    const tipEl   = document.getElementById('tip');
-    const runBtn  = document.getElementById('run');
-    const apiKey  = import.meta.env.VITE_ANTHROPIC_API_KEY;
-
-    const spawnRows = new Map();
-
+    /* ── Tool metadata ────────────────────────────── */
     const TOOL_META = {
-      fetch_usaspending:    { label: 'usaspending',    url: 'api.usaspending.gov',     conditional: false },
-      fetch_cms:            { label: 'cms · npi',      url: 'npiregistry.cms.hhs.gov', conditional: false },
-      fetch_opencorporates: { label: 'opencorporates', url: 'api.opencorporates.com',   conditional: false },
-      fetch_edgar:          { label: 'edgar',          url: 'efts.sec.gov',            conditional: true  },
-      fetch_sam:            { label: 'sam.gov',        url: 'api.sam.gov',             conditional: true  },
+      fetch_usaspending:    { label: 'usaspending',     url: 'api.usaspending.gov',      desc: 'federal contracts' },
+      fetch_cms:            { label: 'cms · npi',       url: 'npiregistry.cms.hhs.gov',  desc: 'provider registry' },
+      fetch_registrylookup: { label: 'registry lookup', url: 'api.registry-lookup.com',  desc: 'corporate records' },
+      fetch_gleif:          { label: 'gleif',           url: 'api.gleif.org',            desc: 'legal entity / LEI' },
+      fetch_ofac:           { label: 'ofac · sdn',      url: 'sanctions.network',        desc: 'sanctions screening' },
+      fetch_opensanctions:  { label: 'opensanctions',   url: 'api.opensanctions.org',    desc: 'sanctions & PEPs' },
+      fetch_edgar:          { label: 'edgar',           url: 'efts.sec.gov',             desc: 'SEC filings' },
+      fetch_sam:            { label: 'sam.gov',         url: 'api.sam.gov',              desc: 'govt contractor reg.' },
     };
 
-    function pushRow(cls, html) {
-      const div = document.createElement('div');
-      div.className = `row ${cls}`;
-      div.innerHTML = html;
-      feedEl.appendChild(div);
-      div.scrollIntoView({ behavior: 'smooth', block: 'end' });
-      return div;
+    /* ── State ────────────────────────────────────── */
+    let currentStepEl   = null;
+    let currentCircleEl = null;
+    let currentChipsEl  = null;
+    let chipMap         = new Map();
+    let stepCount       = 0;
+    let resolvedInStep  = 0;
+    let spawnedInStep   = 0;
+    let lastResult      = null;
+    let lastTip         = '';
+    let latexSource     = '';
+
+    /* ── Helpers ──────────────────────────────────── */
+    function h(tag, cls, html) {
+      const el = document.createElement(tag);
+      if (cls)  el.className = cls;
+      if (html) el.innerHTML = html;
+      return el;
+    }
+    function esc(s) {
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+    function fmtInput(input) {
+      return Object.entries(input || {})
+        .filter(([,v]) => v !== undefined && v !== null && v !== '')
+        .map(([k,v]) => `${k}: ${typeof v === 'object' ? JSON.stringify(v) : String(v)}`)
+        .join('\n');
+    }
+    function cleanSummary(raw) {
+      const line = raw.split('\n').find(l => l.trim()) || '';
+      const clean = line.replace(/^[#*>\-\s]+/, '').trim();
+      return clean.length > 110 ? clean.slice(0, 107) + '…' : clean;
     }
 
-    function pushSpacer() {
-      const div = document.createElement('div');
-      div.className = 'row spacer';
-      feedEl.appendChild(div);
+    /* ── Reset ────────────────────────────────────── */
+    function reset() {
+      traceEl.innerHTML  = '';
+      briefEl.innerHTML  = '';
+      currentStepEl      = null;
+      currentCircleEl    = null;
+      currentChipsEl     = null;
+      stepCount          = 0;
+      resolvedInStep     = 0;
+      spawnedInStep      = 0;
+      lastResult         = null;
+      chipMap.clear();
     }
 
-    function onToolSpawn(tc) {
-      const meta = TOOL_META[tc.name] || { label: tc.name, url: '', conditional: false };
-      if (meta.conditional) pushRow('followup', '  └─ following up on anomaly');
-      const inputSummary = Object.values(tc.input || {}).filter(Boolean).join(', ');
-      const row = pushRow(
-        'tool-spawn',
-        `<span class="tool-name">${meta.label}</span>` +
-        ` <span class="tool-arrow">↗</span>` +
-        ` <span class="tool-url">${meta.url}</span>` +
-        (inputSummary ? ` <span class="tool-input">· ${inputSummary}</span>` : '') +
-        ` <span class="blink">_</span>`
-      );
-      spawnRows.set(tc.id, row);
+    /* ── Button state ─────────────────────────────── */
+    function setRunning(running) {
+      runBtn.disabled = running;
+      if (running) {
+        btnLabel.textContent = 'Running';
+        btnArrow.innerHTML = ' <span class="btn-spinner"></span>';
+      } else {
+        btnLabel.textContent = 'Investigate';
+        btnArrow.textContent = ' →';
+      }
     }
 
-    function onToolResult(tc, result) {
-      const row = spawnRows.get(tc.id);
-      if (row) { row.querySelector('.blink')?.remove(); row.classList.add('resolved'); }
-      const notes = extractNotes(tc.name, tc.input, result);
-      const flags = extractFlags(tc.name, result);
-      for (const note of notes) pushRow('log-note', `  · ${note}`);
-      for (const flag of flags) pushRow('log-flag', `  ⚑ ${flag}`);
-      if (!result?.error) pushRow('log-done', '  ✓ done');
-      pushSpacer();
+    /* ── Timeline step ────────────────────────────── */
+    function createStep(title, isMuted) {
+      stepCount++;
+      resolvedInStep = 0;
+      spawnedInStep  = 0;
+
+      const stepEl   = h('div', 'tl-step');
+      const leftEl   = h('div', 'tl-left');
+      const circleEl = h('div', 'tl-circle active');
+      const lineEl   = h('div', 'tl-line');
+      leftEl.appendChild(circleEl);
+      leftEl.appendChild(lineEl);
+
+      const rightEl  = h('div', 'tl-right');
+      const titleEl  = h('div', isMuted ? 'tl-title muted' : 'tl-title', esc(title));
+      const chipsEl  = h('div', 'tl-chips');
+      rightEl.appendChild(titleEl);
+      rightEl.appendChild(chipsEl);
+
+      stepEl.appendChild(leftEl);
+      stepEl.appendChild(rightEl);
+      traceEl.appendChild(stepEl);
+      stepEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+      currentStepEl   = rightEl;
+      currentCircleEl = circleEl;
+      currentChipsEl  = chipsEl;
     }
 
+    function markStepDone() {
+      if (!currentCircleEl) return;
+      currentCircleEl.className = 'tl-circle done';
+    }
+
+    /* ── Connecting step ──────────────────────────── */
+    function showConnecting() {
+      const stepEl   = h('div', 'tl-step');
+      stepEl.id = 'connecting-step';
+      const leftEl   = h('div', 'tl-left');
+      const circleEl = h('div', 'tl-circle active');
+      const lineEl   = h('div', 'tl-line');
+      leftEl.appendChild(circleEl);
+      leftEl.appendChild(lineEl);
+      const rightEl  = h('div', 'tl-right');
+      rightEl.appendChild(h('div', 'tl-thinking', 'Connecting to Claude · building investigation plan…'));
+      stepEl.appendChild(leftEl);
+      stepEl.appendChild(rightEl);
+      traceEl.appendChild(stepEl);
+    }
+    function hideConnecting() { document.getElementById('connecting-step')?.remove(); }
+
+    /* ── onThinking ───────────────────────────────── */
     function onThinking(text) {
-      const line = text.split('\n').find(l => l.trim());
-      if (line) pushRow('thinking', `▸ ${line.trim()}`);
+      hideConnecting();
+      createStep(cleanSummary(text) || 'Analyzing gathered data…', false);
     }
 
+    /* ── onToolSpawn ──────────────────────────────── */
+    function onToolSpawn(tc) {
+      hideConnecting();
+      if (!currentChipsEl) createStep('Querying data sources…', false);
+
+      const meta     = TOOL_META[tc.name] || { label: tc.name, url: '', desc: 'data source' };
+      const inputStr = fmtInput(tc.input);
+
+      const chipEl   = h('div', 'tl-chip');
+      chipEl.dataset.toolName = tc.name;
+      chipEl.dataset.input    = JSON.stringify(tc.input || {});
+
+      // Row (always visible)
+      const rowEl = h('div', 'chip-row');
+      rowEl.innerHTML = `
+        <div class="chip-status-icon"><div class="chip-inline-spinner"></div></div>
+        <div class="chip-text">
+          <span class="cn">${esc(meta.label)}</span>
+          <span class="cp"> · <a class="url-link" href="https://${meta.url}" target="_blank" rel="noopener">${meta.url}</a></span>
+        </div>
+        <span class="chip-chevron">▾</span>
+      `;
+
+      // Detail (expandable)
+      const detailEl = h('div', 'chip-detail');
+      const innerEl  = h('div', 'chip-detail-inner');
+      if (inputStr) {
+        const ib = h('div', 'detail-block');
+        ib.innerHTML = `<div class="detail-lbl">Input</div><div class="detail-code">${esc(inputStr)}</div>`;
+        innerEl.appendChild(ib);
+      }
+      const ob = h('div', 'detail-block');
+      ob.innerHTML = `<div class="detail-lbl">Output</div><div class="detail-code" id="out-${tc.id}" style="color:var(--txt-3)">Waiting for response…</div>`;
+      innerEl.appendChild(ob);
+      detailEl.appendChild(innerEl);
+
+      chipEl.appendChild(rowEl);
+      chipEl.appendChild(detailEl);
+      currentChipsEl.appendChild(chipEl);
+
+      // Toggle expand
+      rowEl.querySelector('.url-link').addEventListener('click', e => e.stopPropagation());
+      rowEl.addEventListener('click', () => chipEl.classList.toggle('open'));
+
+      chipMap.set(tc.id, chipEl);
+      spawnedInStep++;
+    }
+
+    /* ── onToolResult ─────────────────────────────── */
+    function onToolResult(tc, result) {
+      const chipEl = chipMap.get(tc.id);
+      if (!chipEl) return;
+
+      chipEl.dataset.result = JSON.stringify(result);
+
+      const hasError = !!result?.error;
+      const isEmpty  = result?.found === false;
+      const notes    = extractNotes(tc.name, tc.input, result);
+      const firstNote = notes[0] || '';
+
+      // Update status icon
+      const iconWrap = chipEl.querySelector('.chip-status-icon');
+      if (iconWrap) {
+        const state = hasError ? 'error' : isEmpty ? 'empty' : 'resolved';
+        iconWrap.innerHTML = `<div class="chip-dot ${state}"></div>`;
+      }
+
+      // Update preview text in chip row
+      const textEl = chipEl.querySelector('.chip-text');
+      const meta   = TOOL_META[tc.name] || { label: tc.name, url: '' };
+      if (textEl) {
+        let preview = '';
+        if (hasError)        preview = `<span class="ce"> · ${esc(result.error.slice(0, 55))}</span>`;
+        else if (isEmpty)    preview = `<span class="cs"> · ${esc(result.message || 'no records')}</span>`;
+        else if (firstNote)  preview = `<span class="cp"> · ${esc(firstNote)}</span>`;
+        else                 preview = `<span class="cp"> · <a class="url-link" href="https://${meta.url}" target="_blank" rel="noopener">${meta.url}</a></span>`;
+        textEl.innerHTML = `<span class="cn">${esc(meta.label)}</span>${preview}`;
+      }
+
+      // Fill output JSON
+      const outEl = document.getElementById(`out-${tc.id}`);
+      if (outEl) {
+        const pretty = JSON.stringify(result, null, 2);
+        outEl.style.color = '';
+        outEl.textContent = pretty.length > 1400 ? pretty.slice(0, 1397) + '\n…' : pretty;
+      }
+
+      resolvedInStep++;
+      if (resolvedInStep >= spawnedInStep) buildStepNotes();
+    }
+
+    /* ── Build notes below chips ──────────────────── */
+    function buildStepNotes() {
+      if (!currentStepEl) return;
+      currentStepEl.querySelector('.tl-notes')?.remove();
+      const notesEl = h('div', 'tl-notes');
+      let any = false;
+
+      chipMap.forEach((chipEl) => {
+        if (!currentStepEl.contains(chipEl)) return;
+        const toolName = chipEl.dataset.toolName;
+        if (!toolName) return;
+        let result, input;
+        try { result = JSON.parse(chipEl.dataset.result || 'null'); } catch { return; }
+        try { input  = JSON.parse(chipEl.dataset.input  || '{}');   } catch { input = {}; }
+        if (!result) return;
+        const notes = extractNotes(toolName, input, result);
+        const flags = extractFlags(toolName, result);
+        // Skip first note — already shown in chip preview
+        for (const n of notes.slice(1)) { notesEl.appendChild(h('div', 'note-line', esc(n))); any = true; }
+        for (const f of flags)           { notesEl.appendChild(h('div', 'note-line flag', esc(f))); any = true; }
+      });
+
+      if (any) currentStepEl.appendChild(notesEl);
+    }
+
+    /* ── Note extractors ──────────────────────────── */
     function extractNotes(name, input, result) {
-      if (result?.error) return [`error: ${result.error}`];
+      if (result?.error) return [];
       switch (name) {
         case 'fetch_usaspending': {
-          if (!result.found) return [result.message || 'no results'];
+          if (!result.found) return [result.message || 'no contracts found'];
           const rows = [`${result.total_contracts} contracts · $${(result.total_value / 1e6).toFixed(1)}M total`];
           if (result.contracts?.[0]) {
             const c = result.contracts[0];
@@ -320,14 +972,29 @@
             `enumerated: ${p?.enumeration_date}`,
           ].filter(Boolean);
         }
-        case 'fetch_opencorporates': {
-          if (!result.found) return [result.message || 'no corporate records'];
+        case 'fetch_registrylookup': {
+          if (!result.found) return [result.message || 'no registry records'];
           const c = result.companies?.[0];
           return [
-            `${c?.name} · ${c?.jurisdiction} · inc. ${c?.incorporation_date || 'unknown'}`,
-            c?.registered_agent ? `agent: ${c.registered_agent}` : null,
-            c?.dissolution_date ? `dissolved: ${c.dissolution_date}` : null,
+            `${c?.name} · ${c?.jurisdiction}`,
+            c?.status ? `status: ${c.status}` : null,
+            c?.lei ? `lei: ${c.lei}` : null,
           ].filter(Boolean);
+        }
+        case 'fetch_gleif': {
+          if (!result.found) return [result.message || 'no LEI record'];
+          const g = result.entities?.[0];
+          const rows = [`${g?.name} · ${g?.jurisdiction} · ${g?.registration_status}`];
+          if (result.ultimate_parents?.length) rows.push(`ultimate parent: ${result.ultimate_parents[0].name}`);
+          return rows;
+        }
+        case 'fetch_ofac': {
+          if (!result.found) return [result.message || 'no sanctions matches'];
+          return [`${result.total} match(es) · ${[...new Set(result.matches.map(m => m.source))].join(', ')}`];
+        }
+        case 'fetch_opensanctions': {
+          if (!result.found) return [result.message || 'no sanctions/PEP records'];
+          return [`${result.total} result(s) · topics: ${result.results?.[0]?.topics?.join(', ') || 'none'}`];
         }
         case 'fetch_edgar': {
           if (!result.found) return [result.message || 'no filings found'];
@@ -347,110 +1014,399 @@
         default: return [];
       }
     }
-
     function extractFlags(name, result) {
       if (!result?.found) return [];
       switch (name) {
         case 'fetch_cms':
           return !result.providers?.[0]?.address?.address_1 ? ['no physical address on file'] : [];
-        case 'fetch_opencorporates':
-          return result.companies?.[0]?.inactive ? ['company is inactive or dissolved'] : [];
+        case 'fetch_registrylookup':
+          return result.companies?.[0]?.is_active === false ? ['company inactive or dissolved'] : [];
+        case 'fetch_ofac':
+          return result.found ? [`sanctions match: ${result.matches?.[0]?.names?.[0]} (${result.matches?.[0]?.source})`] : [];
         case 'fetch_sam':
           return result.entities?.[0]?.exclusion_flag === 'Y' ? ['exclusion flag active'] : [];
         default: return [];
       }
     }
 
+    /* ── Synthesis ────────────────────────────────── */
     function renderBrief(result) {
+      markStepDone();
+
       if (!result || result.error) {
-        pushRow('error-row', `✗ ${result?.error || 'synthesis failed'}`);
+        const errStep = h('div', 'tl-step');
+        errStep.innerHTML = `
+          <div class="tl-left"><div class="tl-circle error"></div><div class="tl-line"></div></div>
+          <div class="tl-right"><div class="tl-title" style="color:var(--red)">✗ ${esc(result?.error || 'synthesis failed')}</div></div>
+        `;
+        traceEl.appendChild(errStep);
         return;
       }
 
-      briefEl.innerHTML = '';
-      briefEl.appendChild(document.createElement('hr'));
+      lastResult = result;
 
-      function section(label, html) {
-        const wrap = document.createElement('div');
-        wrap.className = 'brief-section';
-        wrap.innerHTML = `<div class="brief-label">${label}</div><div>${html}</div>`;
-        briefEl.appendChild(wrap);
+      // Final timeline step
+      const synStep = h('div', 'tl-step');
+      synStep.innerHTML = `
+        <div class="tl-left"><div class="tl-circle done"></div><div class="tl-line"></div></div>
+        <div class="tl-right"><div class="tl-title">Investigation complete</div></div>
+      `;
+      traceEl.appendChild(synStep);
+
+      briefEl.innerHTML = '';
+
+      const synHdr = h('div', 'synth-header');
+      synHdr.innerHTML = '<span class="synth-label">Synthesis</span><div class="synth-rule"></div>';
+      briefEl.appendChild(synHdr);
+
+      const card = h('div', 'brief-card');
+      briefEl.appendChild(card);
+
+      function row(label, html) {
+        const r = h('div', 'brief-row');
+        r.innerHTML = `<div class="brief-lbl">${label}</div><div class="brief-val">${html}</div>`;
+        card.appendChild(r);
       }
 
-      section('Confidence',
-        `<div class="brief-value confidence-${result.confidence || 'insufficient'}">${result.confidence || '—'}</div>`
-      );
-      section('Reasoning',
-        `<div class="brief-value">${result.reasoning || '—'}</div>`
-      );
-      section('Entities',
-        (result.entities || []).map(e =>
-          `<div class="brief-value">· ${e.name} <span style="color:#bbb;font-size:11px">[${e.type}]</span></div>`
-        ).join('') || '<div class="brief-value" style="color:#bbb">none extracted</div>'
-      );
-      section('Anomalies',
-        (result.anomalies || []).map(a => {
-          const cls   = a.severity === 'high' ? 'sev-high' : a.severity === 'medium' ? 'sev-med' : 'sev-low';
-          const badge = a.severity === 'medium' ? 'MED' : a.severity.toUpperCase();
-          return `<div class="anomaly-row"><span class="sev-badge ${cls}">${badge}</span>${a.description}<span class="anom-source">${a.source}</span></div>`;
-        }).join('') || '<div class="brief-value" style="color:#bbb">none found</div>'
-      );
-      section('Statutes',
-        (result.statutes || []).map(s =>
-          `<div class="statute-row"><span class="statute-code">${s.code}</span>${s.description}</div>`
-        ).join('') || '<div class="brief-value" style="color:#bbb">—</div>'
-      );
-      section('Next Steps',
-        `<div class="brief-value">${result.next_steps || '—'}</div>`
-      );
+      const conf    = (result.confidence || 'insufficient').toLowerCase();
+      const confCls = conf === 'high' ? 'conf-high' : conf === 'medium' ? 'conf-medium' : conf === 'low' ? 'conf-low' : 'conf-insuf';
+      row('Confidence', `<span class="conf-chip ${confCls}">${conf}</span>`);
+      row('Reasoning', esc(result.reasoning || '—'));
 
-      briefEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      const entities = (result.entities || [])
+        .map(e => `<span class="entity-chip">${esc(e.name)}<span class="entity-type">${esc(e.type)}</span></span>`)
+        .join('');
+      row('Entities', entities || '<span style="color:var(--txt-3);font-style:italic">none extracted</span>');
+
+      const anomalies = (result.anomalies || []).map(a => {
+        const cls = a.severity === 'high' ? 'sev-h' : a.severity === 'medium' ? 'sev-m' : 'sev-l';
+        const lbl = a.severity === 'medium' ? 'MED' : (a.severity || '').toUpperCase();
+        return `<div class="anom-item">
+          <span class="sev-b ${cls}">${lbl}</span>
+          <div><div class="anom-desc">${esc(a.description)}</div><div class="anom-src">${esc(a.source)}</div></div>
+        </div>`;
+      }).join('');
+      row('Anomalies', anomalies || '<span style="color:var(--txt-3);font-style:italic">none found</span>');
+
+      const statutes = (result.statutes || [])
+        .map(s => `<div class="statute-item"><span class="statute-code">${esc(s.code)}</span><span>${esc(s.description)}</span></div>`)
+        .join('');
+      row('Statutes', statutes || '<span style="color:var(--txt-3)">—</span>');
+      row('Next Steps', esc(result.next_steps || '—'));
+
+      // LaTeX trigger button
+      const triggerWrap = h('div', 'latex-trigger-wrap');
+      triggerWrap.innerHTML = `
+        <button class="latex-trigger" id="latex-trigger-btn">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M5.5 7a.5.5 0 0 0 0 1h5a.5.5 0 0 0 0-1zM5 9.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5m0 2a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5"/><path d="M9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V4.5zm0 1v2A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1z"/></svg>
+          View as LaTeX
+        </button>
+      `;
+      briefEl.appendChild(triggerWrap);
+      document.getElementById('latex-trigger-btn').addEventListener('click', openLatex);
+
+      setTimeout(() => briefEl.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
     }
 
-    function reset() {
-      feedEl.innerHTML  = '';
-      briefEl.innerHTML = '';
-      spawnRows.clear();
+    /* ── LaTeX generation ─────────────────────────── */
+    function generateLatex(tip, result) {
+      const date = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+      const entities  = (result.entities  || []);
+      const anomalies = (result.anomalies || []);
+      const statutes  = (result.statutes  || []);
+      const confidence = (result.confidence || 'insufficient').toUpperCase();
+
+      const texEsc = s => String(s)
+        .replace(/\\/g,'\\textbackslash{}')
+        .replace(/[&%$#_{}~^]/g, c => '\\' + c)
+        .replace(/\[/g,'[').replace(/\]/g,']');
+
+      const entityRows = entities.map(e =>
+        `  \\item \\textbf{${texEsc(e.name)}} --- \\textit{${texEsc(e.type)}}`
+      ).join('\n') || '  \\item None extracted.';
+
+      const anomalyRows = anomalies.map(a => {
+        const sev = (a.severity || 'low').toUpperCase();
+        return `  \\item[\\textbf{[${sev}]}] ${texEsc(a.description)} \\textit{(source: ${texEsc(a.source)})}`;
+      }).join('\n') || '  \\item None detected.';
+
+      const statuteRows = statutes.map(s =>
+        `  \\item \\texttt{${texEsc(s.code)}} --- ${texEsc(s.description)}`
+      ).join('\n') || '  \\item None identified.';
+
+      return `% Falcon FCA Investigation Report
+% Generated: ${date}
+% DO NOT DISTRIBUTE WITHOUT AUTHORIZATION
+
+\\documentclass[11pt,letterpaper]{article}
+
+\\usepackage[margin=1in]{geometry}
+\\usepackage{parskip}
+\\usepackage[hidelinks]{hyperref}
+\\usepackage{xcolor}
+\\usepackage{fancyhdr}
+\\usepackage{booktabs}
+\\usepackage{enumitem}
+
+\\definecolor{flagred}{RGB}{185,28,28}
+\\definecolor{flagamber}{RGB}{180,83,9}
+\\definecolor{flaggreen}{RGB}{21,128,61}
+
+\\pagestyle{fancy}
+\\fancyhf{}
+\\lhead{\\small\\textsc{Falcon FCA Investigation Agent}}
+\\rhead{\\small\\textsc{Confidential}}
+\\rfoot{\\small\\thepage}
+\\renewcommand{\\headrulewidth}{0.4pt}
+
+\\begin{document}
+
+\\begin{center}
+  {\\Large\\bfseries False Claims Act Investigation Report}\\\\[6pt]
+  {\\small ${texEsc(date)}}\\\\[2pt]
+  {\\small\\ttfamily Automated agent report · Do not cite as legal advice}
+\\end{center}
+
+\\vspace{4pt}
+\\noindent\\rule{\\textwidth}{0.6pt}
+\\vspace{4pt}
+
+\\section*{Tip Summary}
+
+\\noindent\\textit{${texEsc(tip)}}
+
+\\section*{Confidence Assessment}
+
+\\noindent\\textbf{Overall Confidence:} \\texttt{${confidence}}
+
+\\noindent ${texEsc(result.reasoning || 'No reasoning provided.')}
+
+\\section*{Entities Investigated}
+
+\\begin{itemize}[leftmargin=1.5em]
+${entityRows}
+\\end{itemize}
+
+\\section*{Anomalies Detected}
+
+\\begin{description}[leftmargin=2em, labelwidth=3em]
+${anomalyRows}
+\\end{description}
+
+\\section*{Applicable Statutes}
+
+\\begin{itemize}[leftmargin=1.5em]
+${statuteRows}
+\\end{itemize}
+
+\\section*{Recommended Next Steps}
+
+\\noindent ${texEsc(result.next_steps || 'No further steps recommended.')}
+
+\\vspace{24pt}
+\\noindent\\rule{\\textwidth}{0.4pt}
+
+\\begin{center}
+  \\small\\textit{This report was generated automatically by the Falcon FCA Investigation Agent on ${texEsc(date)}.
+  It does not constitute legal advice. All findings require independent verification before use in any legal proceeding.}
+\\end{center}
+
+\\end{document}
+`;
     }
 
+    /* ── LaTeX HTML render ────────────────────────── */
+    function renderLatexHtml(tip, result) {
+      const date = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+      const entities  = result.entities  || [];
+      const anomalies = result.anomalies || [];
+      const statutes  = result.statutes  || [];
+      const conf      = (result.confidence || 'insufficient').toLowerCase();
+
+      const entityHtml = entities.length
+        ? entities.map(e => `<div class="ltx-item"><span class="ltx-item-label">[${esc(e.type)}]</span><span>${esc(e.name)}</span></div>`).join('')
+        : '<div class="ltx-body" style="color:#999;font-style:italic">None extracted.</div>';
+
+      const anomalyHtml = anomalies.length
+        ? anomalies.map(a => {
+            const cls = a.severity === 'high' ? 'ltx-badge-high' : a.severity === 'medium' ? 'ltx-badge-medium' : 'ltx-badge-low';
+            const lbl = a.severity === 'medium' ? 'MED' : (a.severity || '').toUpperCase();
+            return `<div class="ltx-item" style="margin-bottom:6px">
+              <span class="ltx-badge ${cls}">${lbl}</span>
+              <div>${esc(a.description)} <span style="color:#888;font-size:10pt;font-family:var(--mono)"> · ${esc(a.source)}</span></div>
+            </div>`;
+          }).join('')
+        : '<div class="ltx-body" style="color:#999;font-style:italic">None detected.</div>';
+
+      const statuteHtml = statutes.length
+        ? statutes.map(s => `<div class="ltx-item"><span class="ltx-item-label" style="color:#2563eb">${esc(s.code)}</span><span>${esc(s.description)}</span></div>`).join('')
+        : '<div class="ltx-body" style="color:#999;font-style:italic">None identified.</div>';
+
+      return `<div class="ltx-doc">
+        <div class="ltx-title">False Claims Act Investigation Report</div>
+        <div class="ltx-subtitle">${esc(date)} · falcon automated agent · confidential</div>
+        <hr class="ltx-rule" />
+
+        <div class="ltx-section">Tip Summary</div>
+        <div class="ltx-body" style="font-style:italic">${esc(tip)}</div>
+
+        <div class="ltx-section">Confidence Assessment</div>
+        <div class="ltx-body">
+          <span class="ltx-conf ${conf}">${conf.toUpperCase()}</span>
+          &nbsp;&nbsp;${esc(result.reasoning || '—')}
+        </div>
+
+        <div class="ltx-section">Entities Investigated</div>
+        ${entityHtml}
+
+        <div class="ltx-section">Anomalies Detected</div>
+        ${anomalyHtml}
+
+        <div class="ltx-section">Applicable Statutes</div>
+        ${statuteHtml}
+
+        <div class="ltx-section">Recommended Next Steps</div>
+        <div class="ltx-body">${esc(result.next_steps || '—')}</div>
+
+        <div class="ltx-footer">
+          This report was generated automatically by the Falcon FCA Investigation Agent on ${esc(date)}.
+          It does not constitute legal advice. All findings require independent verification before use in any legal proceeding.
+        </div>
+      </div>`;
+    }
+
+    /* ── Open / close LaTeX panel ─────────────────── */
+    function openLatex() {
+      if (!lastResult) return;
+      latexSource = generateLatex(lastTip, lastResult);
+      latexBody.innerHTML = renderLatexHtml(lastTip, lastResult);
+      document.body.classList.add('split-open');
+      document.getElementById('latex-panel').scrollTop = 0;
+    }
+
+    function closeLatex() {
+      document.body.classList.remove('split-open');
+    }
+
+    // Expose to inline onclick handlers in static HTML
+    window.closeLatex   = closeLatex;
+    window.copyTex      = () => {
+      navigator.clipboard.writeText(latexSource).then(() => {
+        const btn = document.getElementById('btn-copy-tex');
+        const orig = btn.textContent;
+        btn.textContent = 'Copied!';
+        setTimeout(() => { btn.innerHTML = `<svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor"><path d="M4 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zm2-1a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1z"/><path d="M2 5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-1h-1v1H2V6h1V5z"/></svg> Copy .tex`; }, 1400);
+      });
+    };
+    window.downloadTex  = () => {
+      const blob = new Blob([latexSource], { type: 'text/plain' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `falcon-report-${Date.now()}.tex`;
+      a.click();
+    };
+    window.exportPdf = () => {
+      // Print only the LaTeX panel via a new window
+      const w = window.open('', '_blank');
+      w.document.write(`<!DOCTYPE html><html><head>
+        <title>Falcon FCA Report</title>
+        <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+        <style>
+          body { font-family: 'Crimson Pro', Georgia, serif; font-size: 12pt; color: #1a1a1a; margin: 1in; }
+          .ltx-title { font-size: 18pt; font-weight: 600; text-align: center; margin-bottom: 4px; }
+          .ltx-subtitle { font-size: 10pt; color: #666; text-align: center; font-family: 'JetBrains Mono', monospace; margin-bottom: 20px; }
+          .ltx-rule { border: none; border-top: 1px solid #bbb; margin: 16px 0; }
+          .ltx-section { font-size: 11pt; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin: 22px 0 8px; font-family: 'JetBrains Mono', monospace; }
+          .ltx-body { font-size: 11.5pt; margin-bottom: 10px; }
+          .ltx-item { display: flex; gap: 12px; margin: 5px 0; font-size: 11pt; }
+          .ltx-item-label { font-family: 'JetBrains Mono', monospace; font-size: 9.5pt; color: #555; flex-shrink: 0; min-width: 60px; }
+          .ltx-badge { display: inline-block; font-family: 'JetBrains Mono', monospace; font-size: 9pt; font-weight: 600; padding: 1px 5px; border-radius: 3px; margin-right: 6px; }
+          .ltx-badge-high   { background: #fee2e2; color: #dc2626; }
+          .ltx-badge-medium { background: #fef3c7; color: #d97706; }
+          .ltx-badge-low    { background: #dcfce7; color: #16a34a; }
+          .ltx-footer { margin-top: 32px; padding-top: 12px; border-top: 1px solid #ddd; font-size: 9pt; color: #999; font-family: 'JetBrains Mono', monospace; }
+          .ltx-conf { font-family: 'JetBrains Mono', monospace; font-size: 10pt; font-weight: 600; padding: 2px 8px; border-radius: 4px; display: inline-block; }
+          .ltx-conf.high   { background: #fee2e2; color: #dc2626; }
+          .ltx-conf.medium { background: #fef3c7; color: #d97706; }
+          .ltx-conf.low    { background: #dcfce7; color: #16a34a; }
+          .ltx-conf.insufficient { background: #f4f4f5; color: #71717a; }
+        </style>
+      </head><body>${latexBody.innerHTML}</body></html>`);
+      w.document.close();
+      w.focus();
+      setTimeout(() => { w.print(); }, 600);
+    };
+
+    /* ── Run button ───────────────────────────────── */
+    runBtn.addEventListener('click', async () => {
+      const tip = tipEl.value.trim();
+      if (!tip) { tipEl.focus(); return; }
+      if (!apiKey) {
+        reset();
+        const errStep = h('div', 'tl-step');
+        errStep.innerHTML = `
+          <div class="tl-left"><div class="tl-circle error"></div></div>
+          <div class="tl-right"><div class="tl-title" style="color:var(--red)">✗ VITE_ANTHROPIC_API_KEY not set in .env</div></div>
+        `;
+        traceEl.appendChild(errStep);
+        return;
+      }
+
+      reset();
+      lastTip = tip;
+      setRunning(true);
+      showConnecting();
+
+      const result = await runAgent(tip, apiKey, {
+        onThinking(text)       { onThinking(text); },
+        onToolSpawn(tc)        { onToolSpawn(tc); },
+        onToolResult(tc, res)  { onToolResult(tc, res); },
+        onError(err) {
+          hideConnecting();
+          markStepDone();
+          const errStep = h('div', 'tl-step');
+          errStep.innerHTML = `
+            <div class="tl-left"><div class="tl-circle error"></div></div>
+            <div class="tl-right"><div class="tl-title" style="color:var(--red)">✗ ${esc(err.message)}</div></div>
+          `;
+          traceEl.appendChild(errStep);
+        },
+      });
+
+      renderBrief(result);
+      setRunning(false);
+      runBtn.classList.add('done');
+      setTimeout(() => runBtn.classList.remove('done'), 1400);
+    });
+
+    /* ── SSE / Slack ──────────────────────────────── */
     if (sessionId) {
       reset();
       const slackBotUrl = document.querySelector('meta[name="slack-bot-url"]')?.content || 'http://localhost:3001';
-      const banner = document.createElement('div');
-      banner.className = 'live-banner';
-      banner.textContent = '⚡ Live session · triggered from Slack';
-      feedEl.insertAdjacentElement('beforebegin', banner);
+      const banner = h('div', 'live-banner');
+      banner.innerHTML = '<div class="live-dot"></div> Live session · triggered from Slack';
+      traceEl.insertAdjacentElement('beforebegin', banner);
       const es = new EventSource(`${slackBotUrl}/api/session/${sessionId}`);
       es.onmessage = (e) => {
         const event = JSON.parse(e.data);
         if (event.type === 'tool_spawn')  onToolSpawn(event.toolCall);
         if (event.type === 'tool_result') onToolResult({ id: event.toolCallId, name: event.name, input: {} }, event.result);
         if (event.type === 'done')        { renderBrief(event.result); es.close(); }
-        if (event.type === 'error')       { pushRow('error-row', `✗ ${event.message}`); es.close(); }
+        if (event.type === 'error') {
+          const errStep = h('div', 'tl-step');
+          errStep.innerHTML = `<div class="tl-left"><div class="tl-circle error"></div></div>
+            <div class="tl-right"><div class="tl-title" style="color:var(--red)">✗ ${esc(event.message)}</div></div>`;
+          traceEl.appendChild(errStep);
+          es.close();
+        }
       };
-      es.onerror = () => pushRow('error-row', '✗ lost connection to agent stream');
+      es.onerror = () => {
+        const errStep = h('div', 'tl-step');
+        errStep.innerHTML = `<div class="tl-left"><div class="tl-circle error"></div></div>
+          <div class="tl-right"><div class="tl-title" style="color:var(--red)">✗ lost connection to stream</div></div>`;
+        traceEl.appendChild(errStep);
+      };
     }
-
-    runBtn.addEventListener('click', async () => {
-      const tip = tipEl.value.trim();
-      if (!tip) return;
-      if (!apiKey) {
-        pushRow('error-row', '✗ VITE_ANTHROPIC_API_KEY not set in .env');
-        return;
-      }
-      reset();
-      runBtn.disabled    = true;
-      runBtn.textContent = 'Running...';
-      const result = await runAgent(tip, apiKey, {
-        onToolSpawn,
-        onToolResult,
-        onThinking,
-        onError: (err) => pushRow('error-row', `✗ ${err.message}`),
-      });
-      renderBrief(result);
-      runBtn.disabled    = false;
-      runBtn.textContent = 'Investigate →';
-    });
   </script>
 </body>
 </html>
