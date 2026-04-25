@@ -9,9 +9,9 @@ RULES – follow exactly:
    - Dollar amounts, date ranges, agency names, DUNS/UEI numbers
 
 2. TOOL SELECTION LOGIC
-   - Company name found → ALWAYS call fetch_usaspending + fetch_opencorporates + fetch_registrylookup + fetch_gleif
+   - Company name found → ALWAYS call fetch_usaspending + fetch_registrylookup + fetch_gleif
    - NPI number found OR medical context (Medicare/Medicaid/HHS/DME) → call fetch_cms
-   - OpenCorporates OR fetch_registrylookup returns shell structure or suspicious parent → call fetch_edgar
+   - fetch_registrylookup returns shell structure, suspicious parent, or dissolved entity → call fetch_edgar
    - USASpending returns contracts AND another anomaly already exists → call fetch_sam
    - Any company name or individual name → call fetch_opensanctions in parallel with other lookups
    - LEI number found in tip → call fetch_gleif with the lei parameter
@@ -85,20 +85,8 @@ export const TOOL_DEFINITIONS = [
     }
   },
   {
-    name: "fetch_opencorporates",
-    description: "Trace corporate ownership across US state registries. Always pair with fetch_usaspending. Returns incorporation date, registered agent, parent/subsidiary structure, dissolution status.",
-    input_schema: {
-      type: "object",
-      properties: {
-        company_name: { type: "string", description: "Full or partial company name" },
-        jurisdiction: { type: "string", description: "e.g. us_de for Delaware" }
-      },
-      required: ["company_name"]
-    }
-  },
-  {
     name: "fetch_registrylookup",
-    description: "Search 521M+ legal entities across 309 jurisdictions via Registry Lookup (powered by Veridion). Call in parallel with fetch_opencorporates whenever a company name is present. Returns legal name, jurisdiction, registry number, incorporation date, active status, registered address, and LEI identifier if available. Broader global coverage than OpenCorporates.",
+    description: "Search 521M+ legal entities across 309 jurisdictions via Registry Lookup (powered by Veridion). Call whenever a company name is present. Returns legal name, jurisdiction, registry number, incorporation date, active status, registered address, and LEI identifier if available.",
     input_schema: {
       type: "object",
       properties: {

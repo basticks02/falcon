@@ -21,14 +21,6 @@ export default defineConfig({
           proxy.on('proxyReq', (proxyReq) => { proxyReq.removeHeader('origin'); });
         }
       },
-      '/proxy/opencorporates': {
-        target: 'https://api.opencorporates.com',
-        changeOrigin: true,
-        rewrite: (p) => p.replace(/^\/proxy\/opencorporates/, ''),
-        configure: (proxy) => {
-          proxy.on('proxyReq', (proxyReq) => { proxyReq.removeHeader('origin'); });
-        }
-      },
       '/proxy/opensanctions': {
         target: 'https://api.opensanctions.org',
         changeOrigin: true,

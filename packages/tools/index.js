@@ -82,38 +82,6 @@ export async function fetch_cms({ npi, company_name }) {
   } catch (e) { return { error: e.message }; }
 }
 
-export async function fetch_opencorporates({ company_name, jurisdiction }) {
-  const OC_API_KEY = getEnv("OPENCORPORATES_API_KEY");
-  let url = apiUrl(
-    `https://api.opencorporates.com/v0.4/companies/search?q=${encodeURIComponent(company_name)}&per_page=5`,
-    '/proxy/opencorporates'
-  );
-  if (jurisdiction) url += `&jurisdiction_code=${jurisdiction}`;
-  if (OC_API_KEY) url += `&api_token=${OC_API_KEY}`;
-  try {
-    const res = await fetch(url);
-    if (res.status === 401) return { error: "OpenCorporates requires an API key. Set OPENCORPORATES_API_KEY in .env. Free key at opencorporates.com/api_accounts/new" };
-    if (!res.ok) return { error: `OpenCorporates ${res.status}` };
-    const data = await res.json();
-    const companies = data.results?.companies;
-    if (!companies?.length) return { found: false, message: `No corporate records for "${company_name}"` };
-    return {
-      found: true,
-      companies: companies.map(c => ({
-        name: c.company.name,
-        jurisdiction: c.company.jurisdiction_code,
-        incorporation_date: c.company.incorporation_date,
-        dissolution_date: c.company.dissolution_date,
-        status: c.company.current_status,
-        registered_agent: c.company.registered_agent_name,
-        company_type: c.company.company_type,
-        url: c.company.opencorporates_url,
-        inactive: c.company.inactive
-      }))
-    };
-  } catch (e) { return { error: e.message }; }
-}
-
 export async function fetch_edgar({ query }) {
   const url = `https://efts.sec.gov/LATEST/search-index?q="${encodeURIComponent(query)}"&dateRange=custom&startdt=2018-01-01&enddt=${new Date().toISOString().split("T")[0]}`;
   try {
@@ -240,7 +208,7 @@ export async function fetch_gleif({ company_name, lei }) {
       records = data.data ? [data.data] : [];
     } else {
       const url = apiUrl(
-        `https://api.gleif.org/api/v1/lei-records?filter[fullLegalName]=${encodeURIComponent(company_name)}&page[size]=5`,
+        `https://api.gleif.org/api/v1/lei-records?filter[entity.legalName]=${encodeURIComponent(company_name)}&page[size]=5`,
         '/proxy/gleif'
       );
       const res = await fetch(url, { headers: { Accept: "application/json" } });
@@ -298,7 +266,7 @@ export async function fetch_gleif({ company_name, lei }) {
 
 // Tool executor – maps Claude's tool_use name to the right function
 export async function executeTool({ name, input }) {
-  const map = { fetch_usaspending, fetch_cms, fetch_opencorporates, fetch_registrylookup, fetch_edgar, fetch_sam, fetch_opensanctions, fetch_gleif };
+  const map = { fetch_usaspending, fetch_cms, fetch_registrylookup, fetch_edgar, fetch_sam, fetch_opensanctions, fetch_gleif };
   const fn = map[name];
   if (!fn) return { error: `Unknown tool: ${name}` };
   try { return await fn(input); }
