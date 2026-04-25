@@ -14,9 +14,13 @@ Returns a structured evidence package in under 10 seconds.
 <br>
 <br>
 
-<a href="https://www.loom.com/share/152f216c30c14383af64e9ca9f1aa04c">
-  <img src="https://cdn.loom.com/sessions/thumbnails/152f216c30c14383af64e9ca9f1aa04c-with-play.gif" alt="Watch the demo" width="720" />
-</a>
+<p align="center">
+  <a href="https://www.loom.com/share/152f216c30c14383af64e9ca9f1aa04c">
+    <img src="https://cdn.loom.com/sessions/thumbnails/152f216c30c14383af64e9ca9f1aa04c-with-play.gif" alt="▶ Watch the demo" width="720" />
+  </a>
+  <br/>
+  <a href="https://www.loom.com/share/152f216c30c14383af64e9ca9f1aa04c">▶ Watch the demo on Loom</a>
+</p>
 
 <br>
 <br>
