@@ -4,24 +4,18 @@
 
 <p align="center">
 Takes a whistleblower tip. Searches 8 government and sanctions databases in parallel.<br>
-Returns a structured evidence package in under 10 seconds.
+Returns a structured evidence package in under ~10 seconds.
 </p>
 
 <p align="center">─────────────────────────────────────</p>
 
-<p align="center"><em>Built for the <strong>c0mpiled-10/DC: AI for Government Hackathon</strong> · DC · April 2026</em></p>
+<p align="center"><em>Built at the <strong>c0mpiled-10/DC: AI for Government Hackathon</strong> · DC · April 2026</em></p>
 
-<br>
-<br>
 
 <p align="center">
   <video src="https://github.com/user-attachments/assets/1dcebe6f-d6db-4fc9-8747-d11646fab9d1" width="720" controls></video>
 </p>
 
-<br>
-<br>
-
----
 
 ## What it does
 
