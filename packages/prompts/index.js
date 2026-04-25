@@ -9,15 +9,17 @@ RULES – follow exactly:
    - Dollar amounts, date ranges, agency names, DUNS/UEI numbers
 
 2. TOOL SELECTION LOGIC
-   - Company name found → ALWAYS call fetch_usaspending + fetch_registrylookup + fetch_gleif
+   - Company name found → ALWAYS call fetch_usaspending + fetch_registrylookup + fetch_gleif + fetch_ofac in parallel
    - NPI number found OR medical context (Medicare/Medicaid/HHS/DME) → call fetch_cms
    - fetch_registrylookup returns shell structure, suspicious parent, or dissolved entity → call fetch_edgar
    - USASpending returns contracts AND another anomaly already exists → call fetch_sam
    - Any company name or individual name → call fetch_opensanctions in parallel with other lookups
+   - LEI found in fetch_registrylookup results → pass that LEI directly to fetch_gleif as the "lei" parameter (do NOT search by name — the LEI gives exact results)
    - LEI number found in tip → call fetch_gleif with the lei parameter
    - fetch_gleif LAPSED registration + active contracts = anomaly
+   - fetch_gleif ultimate_parents exposes hidden ownership chain — flag if ultimate parent is in a secrecy jurisdiction or itself LAPSED
    - Never call fetch_cms without medical context
-   - Never call fetch_edgar if OpenCorporates found nothing
+   - Never call fetch_edgar if fetch_registrylookup found nothing
 
    - fetch_opensanctions: dataset options are "default" (all), "sanctions", "peps"
      schema options: "Company", "Person", "LegalEntity"
@@ -31,6 +33,7 @@ RULES – follow exactly:
    - Multiple LLCs sharing a registered agent that dissolved post-audit
    - GLEIF registration_status = LAPSED while entity holds active federal contracts
    - GLEIF entity jurisdiction is a known secrecy/shell-company jurisdiction (BVI, Cayman, Panama, etc.)
+   - fetch_ofac returns any match — even partial — for an entity holding active federal contracts
 
 4. DO NOT FLAG:
    - High contract values alone
@@ -120,8 +123,20 @@ export const TOOL_DEFINITIONS = [
     }
   },
   {
+    name: "fetch_ofac",
+    description: "Screen a name against OFAC SDN, UN Security Council, and EU Financial Sanctions lists via sanctions.network. Call in parallel with fetch_opensanctions for any company or person name. No API key required. Returns matched names, source list, nationality, sanctions programs.",
+    input_schema: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: "Company or person name to screen" },
+        sources: { type: "array", items: { type: "string" }, description: "Optional filter: e.g. ['ofac_sdn', 'unsc', 'eu']" }
+      },
+      required: ["name"]
+    }
+  },
+  {
     name: "fetch_gleif",
-    description: "Look up a company in the GLEIF global LEI (Legal Entity Identifier) registry. Call for any company name alongside fetch_usaspending and fetch_opencorporates. Returns LEI, entity status, registration status (ISSUED/LAPSED), jurisdiction, category, and direct parent ownership chain. No API key required.",
+    description: "Look up a company in the GLEIF global LEI registry. Prefer passing the `lei` parameter (from fetch_registrylookup results) over company_name for exact results. Returns LEI, entity status, registration status (ISSUED/LAPSED), jurisdiction, direct parent chain, and ultimate parent chain. No API key required.",
     input_schema: {
       type: "object",
       properties: {

@@ -37,6 +37,14 @@ export default defineConfig({
           proxy.on('proxyReq', (proxyReq) => { proxyReq.removeHeader('origin'); });
         }
       },
+      '/proxy/sanctionsnetwork': {
+        target: 'https://sanctions.network',
+        changeOrigin: true,
+        rewrite: (p) => p.replace(/^\/proxy\/sanctionsnetwork/, ''),
+        configure: (proxy) => {
+          proxy.on('proxyReq', (proxyReq) => { proxyReq.removeHeader('origin'); });
+        }
+      },
       '/proxy/gleif': {
         target: 'https://api.gleif.org',
         changeOrigin: true,

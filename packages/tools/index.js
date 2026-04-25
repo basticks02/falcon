@@ -219,24 +219,26 @@ export async function fetch_gleif({ company_name, lei }) {
 
     if (!records.length) return { found: false, message: `No GLEIF records for "${company_name || lei}"` };
 
-    // For the first match, fetch ownership links
     const topLei = records[0].attributes?.lei;
-    let ownership = null;
+    let direct_parents = null;
+    let ultimate_parents = null;
+
     if (topLei) {
-      const ownerUrl = apiUrl(
-        `https://api.gleif.org/api/v1/lei-records/${topLei}/direct-parents?page[size]=3`,
-        '/proxy/gleif'
-      );
-      const ownerRes = await fetch(ownerUrl, { headers: { Accept: "application/json" } });
-      if (ownerRes.ok) {
-        const ownerData = await ownerRes.json();
-        ownership = (ownerData.data ?? []).map(p => ({
-          lei: p.attributes?.lei,
-          name: p.attributes?.entity?.legalName?.name,
-          country: p.attributes?.entity?.legalAddress?.country,
-          status: p.attributes?.entity?.status
-        }));
-      }
+      const [directRes, ultimateRes] = await Promise.all([
+        fetch(apiUrl(`https://api.gleif.org/api/v1/lei-records/${topLei}/direct-parents?page[size]=5`, '/proxy/gleif'), { headers: { Accept: "application/json" } }),
+        fetch(apiUrl(`https://api.gleif.org/api/v1/lei-records/${topLei}/ultimate-parents?page[size]=5`, '/proxy/gleif'), { headers: { Accept: "application/json" } })
+      ]);
+
+      const mapParent = p => ({
+        lei: p.attributes?.lei,
+        name: p.attributes?.entity?.legalName?.name,
+        country: p.attributes?.entity?.legalAddress?.country,
+        status: p.attributes?.entity?.status,
+        registration_status: p.attributes?.registration?.status
+      });
+
+      if (directRes.ok) direct_parents = ((await directRes.json()).data ?? []).map(mapParent);
+      if (ultimateRes.ok) ultimate_parents = ((await ultimateRes.json()).data ?? []).map(mapParent);
     }
 
     return {
@@ -259,14 +261,40 @@ export async function fetch_gleif({ company_name, lei }) {
           managing_lou: a.registration?.managingLou
         };
       }),
-      direct_parents: ownership
+      direct_parents,
+      ultimate_parents
+    };
+  } catch (e) { return { error: e.message }; }
+}
+
+export async function fetch_ofac({ name, sources }) {
+  const params = new URLSearchParams({ name, limit: "10" });
+  if (sources) params.set("source_id", `in.(${sources.join(",")})`);
+  const url = apiUrl(`https://sanctions.network/rpc/search_sanctions?${params}`, '/proxy/sanctionsnetwork');
+  try {
+    const res = await fetch(url, { headers: { Accept: "application/json" } });
+    if (!res.ok) return { error: `OFAC/Sanctions ${res.status}` };
+    const data = await res.json();
+    if (!data?.length) return { found: false, message: `No sanctions matches for "${name}"` };
+    return {
+      found: true,
+      total: data.length,
+      matches: data.map(e => ({
+        names: e.names,
+        source: e.source,
+        addresses: e.addresses ?? [],
+        nationalities: e.nationalities ?? [],
+        programs: e.programs ?? [],
+        id: e.id ?? null,
+        remarks: e.remarks ?? null
+      }))
     };
   } catch (e) { return { error: e.message }; }
 }
 
 // Tool executor – maps Claude's tool_use name to the right function
 export async function executeTool({ name, input }) {
-  const map = { fetch_usaspending, fetch_cms, fetch_registrylookup, fetch_edgar, fetch_sam, fetch_opensanctions, fetch_gleif };
+  const map = { fetch_usaspending, fetch_cms, fetch_registrylookup, fetch_edgar, fetch_sam, fetch_opensanctions, fetch_gleif, fetch_ofac };
   const fn = map[name];
   if (!fn) return { error: `Unknown tool: ${name}` };
   try { return await fn(input); }
